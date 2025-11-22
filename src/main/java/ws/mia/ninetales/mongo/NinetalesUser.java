@@ -72,4 +72,16 @@ public class NinetalesUser {
 	protected void setQuestionChannelId(Long questionChannelId) {
 		this.questionChannelId = questionChannelId;
 	}
+
+	@Override
+	public String toString() {
+		return "NinetalesUser{" +
+				"discordId=" + discordId +
+				", minecraftUuid=" + minecraftUuid +
+				", discordApplicationChannelId=" + discordApplicationChannelId +
+				", guildApplicationChannelId=" + guildApplicationChannelId +
+				", questionChannelId=" + questionChannelId +
+				", status=" + status +
+				'}';
+	}
 }

@@ -4,6 +4,7 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -42,6 +43,15 @@ public class MongoUserService {
 
 	public NinetalesUser getUser(UUID minecraftUuid) {
 		Document doc = usersCollection.find(Filters.eq("minecraftUuid", minecraftUuid.toString())).first();
+		return documentToUser(doc);
+	}
+
+	public NinetalesUser getUserByApplicationChannelId(long channelId) {
+		Bson filter = Filters.or(
+				Filters.eq("discordApplicationChannelId", channelId),
+				Filters.eq("guildApplicationChannelId", channelId)
+		);
+		Document doc = usersCollection.find(filter).first();
 		return documentToUser(doc);
 	}
 
