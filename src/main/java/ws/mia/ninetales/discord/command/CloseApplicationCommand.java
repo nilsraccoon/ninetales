@@ -8,12 +8,12 @@ import org.springframework.stereotype.Component;
 import ws.mia.ninetales.discord.ApplicationService;
 
 @Component
-public class AcceptApplicationCommand extends SlashCommand {
-	private static final String COMMAND = "accept-app";
+public class CloseApplicationCommand extends SlashCommand {
+	private static final String COMMAND = "close-accepted-app";
 
 	private final ApplicationService applicationService;
 
-	public AcceptApplicationCommand(ApplicationService applicationService) {
+	public CloseApplicationCommand(ApplicationService applicationService) {
 		super();
 
 		this.applicationService = applicationService;
@@ -21,12 +21,11 @@ public class AcceptApplicationCommand extends SlashCommand {
 
 	@Override
 	public CommandData getCommand() {
-		return Commands.slash(COMMAND, "Accept an application in this channel. You need to invite the player on Hypixel.")
-				.addOption(OptionType.STRING, "message", "Optional message to send the user in DMs", false);
+		return Commands.slash(COMMAND, "Close an application once the player has joined.");
 	}
 
 	@Override
 	public void onCommand(SlashCommandInteractionEvent event) {
-		applicationService.acceptApplication(event);
+		applicationService.closeAcceptedApplication(event);
 	}
 }

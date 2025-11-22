@@ -151,9 +151,14 @@ public class ApplicationService {
 			if(optMessage != null && !optMessage.getAsString().isBlank()) {
 				p.sendMessage("A message from our tails: " + optMessage.getAsString()).queue();
 			}
-			event.getChannel().asTextChannel().delete().queue();
+
+			event.getChannel().asTextChannel().sendMessage("Your application has been accepted! Accept your Hypixel invite.").queue();
+			mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), true);
+			event.reply("Accepted :3\nOnce the player has successfully joined the guild, you can run /close-accepted-app here ^w^").setEphemeral(true).queue();
+
+
 		}, (t)-> {
-			event.reply("Failed to accept :(\n"+t.toString()).queue();
+			event.reply("Failed to accept :(\n"+t.toString()).setEphemeral(true).queue();
 		});
 	}
 
@@ -180,8 +185,25 @@ public class ApplicationService {
 			}
 			event.getChannel().asTextChannel().delete().queue();
 		}, (t)-> {
-			event.reply("Failed to deny :(\n"+t.toString()).queue();
+			event.reply("Failed to deny :(\n"+t.toString()).setEphemeral(true).queue();
 		});
+
+	}
+
+	/**
+	 * Close an already accepted application channel once the player has been successfully managed to join.
+	 */
+	public void closeAcceptedApplication(SlashCommandInteractionEvent event) {
+		NinetalesUser ntUser = applicationAcceptDenyValidation(event);
+		if(ntUser == null) return;
+
+		if(!ntUser.isAwaitingHypixelInvite()) {
+			event.reply("That user isn't awaiting an invite. Did you mean to /accept-app?").setEphemeral(true).queue();
+			return;
+		}
+
+		mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), false);
+		event.getChannel().asTextChannel().delete().queue();
 
 	}
 

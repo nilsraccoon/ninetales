@@ -8,6 +8,7 @@ public class NinetalesUser {
 	private UUID minecraftUuid;
 	private Long discordApplicationChannelId;
 	private Long guildApplicationChannelId;
+	private boolean awaitingHypixelInvite;
 	private Long questionChannelId;
 	private UserStatus status;
 
@@ -73,6 +74,14 @@ public class NinetalesUser {
 		this.questionChannelId = questionChannelId;
 	}
 
+	public boolean isAwaitingHypixelInvite() {
+		return awaitingHypixelInvite;
+	}
+
+	protected void setAwaitingHypixelInvite(boolean awaitingHypixelInvite) {
+		this.awaitingHypixelInvite = awaitingHypixelInvite;
+	}
+
 	@Override
 	public String toString() {
 		return "NinetalesUser{" +
@@ -80,6 +89,7 @@ public class NinetalesUser {
 				", minecraftUuid=" + minecraftUuid +
 				", discordApplicationChannelId=" + discordApplicationChannelId +
 				", guildApplicationChannelId=" + guildApplicationChannelId +
+				", awaitingHypixelInvite=" + awaitingHypixelInvite +
 				", questionChannelId=" + questionChannelId +
 				", status=" + status +
 				'}';

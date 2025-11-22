@@ -125,6 +125,14 @@ public class MongoUserService {
 		);
 	}
 
+	public void setAwaitingHypixelInvite(long discordId, boolean a) {
+		ensureUserExists(discordId);
+		usersCollection.updateOne(
+				Filters.eq("discordId", discordId),
+				Updates.set("awaitingHypixelInvite", a)
+		);
+	}
+
 	private void ensureUserExists(long discordId) {
 		if (!isUserLinked(discordId)) {
 			Document userDoc = new Document()
@@ -150,6 +158,7 @@ public class MongoUserService {
 		ninetalesUser.setDiscordApplicationChannelId(doc.getLong("discordApplicationChannelId"));
 		ninetalesUser.setGuildApplicationChannelId(doc.getLong("guildApplicationChannelId"));
 		ninetalesUser.setQuestionChannelId(doc.getLong("questionChannelId"));
+		ninetalesUser.setAwaitingHypixelInvite(doc.getBoolean("awaitingHypixelInvite", false));
 
 		String statusStr = doc.getString("status");
 		ninetalesUser.setStatus(statusStr != null ? UserStatus.valueOf(statusStr) : UserStatus.OUTSIDER);
