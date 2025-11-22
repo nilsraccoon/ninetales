@@ -63,6 +63,10 @@ public class GuildRankService {
 								gMemberRole));
 
 						if(rank == null) {
+							if(ntUser.getStatus() == UserStatus.GUILD_MEMBER) {
+								mongoUserService.setStatus(ntUser.getDiscordId(), UserStatus.DISCORD_MEMBER);
+							}
+
 							List<Role> toAdd = new ArrayList<>();
 							if(ntUser.getStatus() == UserStatus.DISCORD_MEMBER) {
 								toAdd.add(guild.getRoleById(environmentService.getVisitorRoleId()));
