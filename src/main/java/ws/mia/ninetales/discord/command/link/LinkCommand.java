@@ -7,16 +7,13 @@ import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
-import ws.mia.ninetales.discord.GuildRankService;
 import ws.mia.ninetales.discord.command.SlashCommand;
 import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
 
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -46,7 +43,7 @@ public class LinkCommand extends SlashCommand {
 
 	@Override
 	public void onCommand(SlashCommandInteractionEvent event) {
-		if(!Objects.equals(event.getChannelId(), environmentService.getLinkChannelId())) {
+		if (!Objects.equals(event.getChannelId(), environmentService.getLinkChannelId())) {
 			event.reply("If you want to link, use <#%s>".formatted(environmentService.getLinkChannelId())).setEphemeral(true).queue();
 			return;
 		}
@@ -57,7 +54,7 @@ public class LinkCommand extends SlashCommand {
 			return;
 		}
 
-		if(mongoUserService.isUserLinked(event.getUser().getIdLong())) {
+		if (mongoUserService.isUserLinked(event.getUser().getIdLong())) {
 			event.reply("You're already linked you goober!\n-# (if you need help, message a tail :3)").setEphemeral(true).queue();
 			return;
 		}
@@ -76,13 +73,13 @@ public class LinkCommand extends SlashCommand {
 			return;
 		}
 
-		if(!expectedDiscord.equals(event.getUser().getName())) {
+		if (!expectedDiscord.equals(event.getUser().getName())) {
 			event.reply("That minecraft account isn't linked to your discord!\nFollow the steps above to link your account.").setEphemeral(true).queue();
 			return;
 		}
 
 
-		if(!mongoUserService.linkUser(event.getUser().getIdLong(), mojangUuid)) {
+		if (!mongoUserService.linkUser(event.getUser().getIdLong(), mojangUuid)) {
 			log.warn("Unable to link {} (IGN) to {} (Discord)", username.getAsString(), event.getUser().getName());
 			event.reply("We couldn't link you :(\nThis likely means that you are already linked.\n-# (blame mia)").setEphemeral(true).queue();
 			return;

@@ -87,14 +87,6 @@ public class GuildRankService {
 					log.warn("Failed to retrieve members", t);
 				});
 
-		ranks.forEach((mcUuid, rank) -> {
-			NinetalesUser ntUser = mongoUserService.getUser(mcUuid);
-			if (ntUser == null) return;
-
-
-		});
-
-
 	}
 
 }
