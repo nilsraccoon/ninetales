@@ -97,14 +97,14 @@ public class ApplicationService {
 	public boolean createQuestionChannel(User user, Guild guild, Consumer<NinetalesUser> hasChannelFailure, BiConsumer<TextChannel, NinetalesUser> success) {
 		NinetalesUser ntUser = mongoUserService.getUser(user.getIdLong());
 
-		if (ntUser.getQuestionChannelId() != null) {
+		if (ntUser != null && ntUser.getQuestionChannelId() != null) {
 			hasChannelFailure.accept(ntUser);
 			return false;
 		}
 
 		prepareUserStaffChannel(guild, user, "q-" + user.getIdLong(), environmentService.getQuestionsCategoryId())
 				.queue(tc -> {
-					mongoUserService.setQuestionChannelId(ntUser.getDiscordId(), tc.getIdLong());
+					mongoUserService.setQuestionChannelId(user.getIdLong(), tc.getIdLong());
 					success.accept(tc, ntUser);
 				});
 		return true;
@@ -138,7 +138,8 @@ public class ApplicationService {
 
 		OptionMapping optMessage = event.getOption("message");
 
-		event.getUser().openPrivateChannel().queue(p -> {
+
+		Objects.requireNonNull(event.getGuild()).getMemberById(ntUser.getDiscordId()).getUser().openPrivateChannel().queue(p -> {
 			if(isGuildApp) {
 				p.sendMessage("After careful consideration by our staff team, your application to join Ninetales has been **accepted**!\nWelcome to the guild <3")
 						.queue();
@@ -180,7 +181,7 @@ public class ApplicationService {
 
 		OptionMapping optMessage = event.getOption("reason");
 
-		event.getUser().openPrivateChannel().queue(p -> {
+		Objects.requireNonNull(event.getGuild()).getMemberById(ntUser.getDiscordId()).getUser().openPrivateChannel().queue(p -> {
 			if(isGuildApp) {
 				p.sendMessage("After careful consideration by our staff team, your application to join the Ninetales guild has been **denied**.")
 						.queue();

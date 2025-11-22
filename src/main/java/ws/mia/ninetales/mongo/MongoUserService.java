@@ -2,6 +2,7 @@ package ws.mia.ninetales.mongo;
 
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import org.bson.conversions.Bson;
@@ -21,20 +22,28 @@ public class MongoUserService {
 	}
 
 	public boolean linkUser(long discordId, UUID minecraftUuid) {
-		if (isUserLinked(discordId)) {
+		// Check if this minecraft UUID is already linked to a different discord account
+		NinetalesUser existingUser = getUser(minecraftUuid);
+		if (existingUser != null && existingUser.getDiscordId() != discordId) {
 			return false;
 		}
 
-		if (isUserLinked(minecraftUuid)) {
+		// Check if this discord ID is already linked to a different minecraft account
+		NinetalesUser currentUser = getUser(discordId);
+		if (currentUser != null && currentUser.getMinecraftUuid() != null && !currentUser.getMinecraftUuid().equals(minecraftUuid)) {
 			return false;
 		}
 
-		Document userDoc = new Document()
-				.append("discordId", discordId)
-				.append("minecraftUuid", minecraftUuid.toString())
-				.append("status", UserStatus.OUTSIDER.name());
+		// Update or insert the user document
+		usersCollection.updateOne(
+				Filters.eq("discordId", discordId),
+				Updates.combine(
+						Updates.set("minecraftUuid", minecraftUuid.toString()),
+						Updates.setOnInsert("status", UserStatus.OUTSIDER.name())
+				),
+				new UpdateOptions().upsert(true)
+		);
 
-		usersCollection.insertOne(userDoc);
 		return true;
 	}
 
@@ -65,6 +74,11 @@ public class MongoUserService {
 				Filters.eq("guildApplicationChannelId", channelId)
 		);
 		Document doc = usersCollection.find(filter).first();
+		return documentToUser(doc);
+	}
+
+	public NinetalesUser getUserByQuestionChannelId(long channelId) {
+		Document doc = usersCollection.find(Filters.eq("questionChannelId", channelId)).first();
 		return documentToUser(doc);
 	}
 

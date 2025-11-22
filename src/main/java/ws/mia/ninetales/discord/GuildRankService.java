@@ -79,6 +79,8 @@ public class GuildRankService {
 							guild.modifyMemberRoles(dcMember,
 									List.of(rank.getRole(guild), gMemberRole),
 									allRoles).queue();
+
+							mongoUserService.setStatus(ntUser.getDiscordId(), UserStatus.GUILD_MEMBER);
 						}
 					});
 

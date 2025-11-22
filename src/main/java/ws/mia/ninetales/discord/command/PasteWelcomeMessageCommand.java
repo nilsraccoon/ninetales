@@ -43,7 +43,7 @@ public class PasteWelcomeMessageCommand extends SlashCommand {
 	public void onCommand(SlashCommandInteractionEvent event) {
 		EmbedBuilder embed = new EmbedBuilder()
 				.setTitle("Ninetales")
-				.setDescription(":3")
+				.setDescription("Select any of the options below to continue :3")
 				.setColor(new Color(215, 193, 248, 239));
 
 
