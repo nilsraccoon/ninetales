@@ -31,15 +31,10 @@ A spring application for the discord bot managing **Ninetales** Hypixel guild me
 
 ## Overview
 ### Automatic Role Synchronization
-- Syncs Hypixel guild ranks to Discord roles.
+- Syncs Hypixel guild ranks to Discord roles periodically.
 - Automatically assigns roles when members link their accounts
 - Manages guild member roles (Egg, Vulpix, Tail, Guild Member) and Visitor role
 - Does not interfere with other roles
-
-### Member Management
-- Discord ↔ Minecraft account linking with Hypixel verification
-- Automatic data cleanup when members leave/are kicked from Discord
-- Prevents duplicate account linking
 
 ### Account Linking
 1. User runs `/link <minecraft username>` in the designated link channel
@@ -53,6 +48,10 @@ A spring application for the discord bot managing **Ninetales** Hypixel guild me
 3. Staff review and use `/accept-app` or `/deny-app`
 4. For accepted apps: Tail invites to guild, then when the player has joined, run `/close-accepted-app`
 5. Channel is automatically deleted after closure
+
+### Member Management
+- Automatic data cleanup when members leave/are kicked from Discord
+- Prevents duplicate account linking
 
 ### Caching
 - **Hypixel API**: 5-minute cache for Discord usernames and guild ranks
