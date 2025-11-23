@@ -16,8 +16,6 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class MongoConfiguration {
 
-
-
 	@Bean
 	public MongoClient mongoClient(EnvironmentService environmentService) {
 		String uri = environmentService.getMongoUri();

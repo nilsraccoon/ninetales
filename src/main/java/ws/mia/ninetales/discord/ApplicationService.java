@@ -12,13 +12,12 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.EnvironmentService;
 import ws.mia.ninetales.hypixel.HypixelAPI;
+import ws.mia.ninetales.hypixel.HypixelGuildRank;
 import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
@@ -297,11 +296,21 @@ public class ApplicationService {
 		guild.retrieveMemberById(ntApplicant.getDiscordId()).queue(member -> {
 			member.getUser().openPrivateChannel().queue(p -> {
 
-				p.sendMessage("After careful consideration by our staff team, your application to join Ninetales has been **accepted**!\nWelcome to the guild <3")
-						.queue();
-				message.ifPresent(msg -> p.sendMessage("A message from our tails: " + msg).queue());
 
-				appChannel.sendMessage("<@%s> Your application has been accepted! Please accept your Hypixel invite.".formatted(ntApplicant.getDiscordId())).queue();
+
+				UUID gmUuid = hypixelAPI.getGuildRanks().entrySet().stream().filter(entry -> {
+					return entry.getValue().equals(HypixelGuildRank.GUILD_MASTER);
+				}).map(Map.Entry::getKey).findAny().orElse(null);
+
+				String gmUsername = gmUuid == null ? "lynyy" : mojangAPI.getUsername(gmUuid);
+
+				appChannel.sendMessage("<@%s> Your application has been **accepted**!\nA Tail has sent you a guild invite.\nRun `/guild accept %s` on Hypixel to finalise your application :3".formatted(ntApplicant.getDiscordId(), gmUsername)).queue(aMsg -> {
+					p.sendMessage("After careful consideration by our staff team, your application to join Ninetales has been **accepted**!\nPlease follow the instructions at %s to finalise your application.\nWelcome to the guild <3".formatted(aMsg.getJumpUrl()))
+							.queue();
+					message.ifPresent(msg -> p.sendMessage("A message from our tails: " + msg).queue());
+				});
+
+
 
 				mongoUserService.setAwaitingHypixelInvite(ntApplicant.getDiscordId(), true);
 				mongoUserService.setDiscordMember(ntApplicant.getDiscordId(), true); // if they're not already
@@ -309,7 +318,7 @@ public class ApplicationService {
 				// close tail discussion channel (from having new msgs)
 				if (ntApplicant.getTailDiscussionChannelId() != null) {
 					TextChannel tailChannel = guild.getTextChannelById(ntApplicant.getTailDiscussionChannelId());
-					tailChannel.sendMessage("The guild application has been accepted by <@"+caller.getId() + ">. Waiting for Hypixel invite before finalising application.").queue();
+					tailChannel.sendMessage("The guild application has been accepted by <@"+caller.getId() + ">. Waiting for a Hypixel invite before finalising application.").queue();
 					tailChannel.getPermissionContainer()
 							.upsertPermissionOverride(guild.getRoleById(environmentService.getTailRoleId()))
 							.setAllowed(Permission.VIEW_CHANNEL)

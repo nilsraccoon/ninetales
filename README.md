@@ -43,10 +43,10 @@ A Spring application for the Discord bot managing **Ninetales** community member
 
 ### Application Workflow
 1. User clicks "Apply" button on welcome message
-2. Bot creates a private application channel and walks user through questions
-3. Tails review and use `/accept-app` or `/deny-app`
+2. Bot creates a private application channels and walks user through questions
+3. Tails review in their own private channel and use `/accept-app` or `/deny-app`
 4. For accepted apps: Tail invites to guild, then when the player has joined, run `/close-accepted-app`
-5. Channel is automatically deleted after closure
+5. Channels are automatically deleted after closure
 
 ### Question Workflow
 1. User clicks "Ask a Question" button on welcome message

@@ -90,6 +90,21 @@ public class GuildRankService {
 								rolesToRemove).queue();
 						mongoUserService.setDiscordMember(ntUser.getDiscordId(), true);
 
+						// check if they have open app channels (close them, it means they've joined the guild)
+						if(ntUser.isAwaitingHypixelInvite()) {
+							mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), false);
+						}
+
+						if(ntUser.getGuildApplicationChannelId() != null) {
+							guild.getTextChannelById(ntUser.getGuildApplicationChannelId()).delete().queue();
+							mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
+						}
+
+						if(ntUser.getTailDiscussionChannelId() != null) {
+							guild.getTextChannelById(ntUser.getTailDiscussionChannelId()).delete().queue();
+							mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), null);
+						}
+
 					});
 				})
 				.onError((t) -> log.warn("Failed to retrieve members", t));
