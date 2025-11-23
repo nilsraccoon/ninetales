@@ -27,7 +27,7 @@ public class ForceRoleSyncCommand extends SlashCommand{
 
 	@Override
 	public void onCommand(SlashCommandInteractionEvent event) {
-		guildRankService.syncRoles();
+		guildRankService.syncRoles(true);
 		event.reply("synced roles owo").setEphemeral(true).queue();
 	}
 }

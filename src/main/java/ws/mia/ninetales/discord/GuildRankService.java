@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.EnvironmentService;
+import ws.mia.ninetales.hypixel.CachedHypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelGuildRank;
 import ws.mia.ninetales.mongo.MongoUserService;
@@ -24,21 +25,27 @@ public class GuildRankService {
 	private final JDA jda;
 	private final EnvironmentService environmentService;
 	private final MongoUserService mongoUserService;
+	private final CachedHypixelAPI cachedHypixelAPI;
 
-	public GuildRankService(HypixelAPI hypixelAPI, JDA jda, EnvironmentService environmentService, MongoUserService mongoUserService) {
+	public GuildRankService(HypixelAPI hypixelAPI, JDA jda, EnvironmentService environmentService, MongoUserService mongoUserService, CachedHypixelAPI cachedHypixelAPI) {
 		this.hypixelAPI = hypixelAPI;
 		this.jda = jda;
 		this.environmentService = environmentService;
 		this.mongoUserService = mongoUserService;
+		this.cachedHypixelAPI = cachedHypixelAPI;
 	}
 
 	@Scheduled(fixedRate = 1000 * 60 * 3L) // 3mins so we hit API cache
 	public void syncRoles() {
+		syncRoles(false);
+	}
+
+	public void syncRoles(boolean retrieve) {
 		log.debug("Performing role sync");
 
 		Guild guild = jda.getGuildById(environmentService.getDiscordGuildId());
 
-		Map<UUID, HypixelGuildRank> ranks = hypixelAPI.getGuildRanks();
+		Map<UUID, HypixelGuildRank> ranks = (!retrieve) ? cachedHypixelAPI.getGuildRanks() : cachedHypixelAPI.retrieveGuildRanks();
 		if (ranks == null) return;
 
 		List<NinetalesUser> allNtUsers = mongoUserService.getAllUsers();

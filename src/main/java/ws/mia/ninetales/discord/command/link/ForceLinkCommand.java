@@ -21,7 +21,7 @@ import java.util.UUID;
 
 @Component
 public class ForceLinkCommand extends SlashCommand {
-	private static final String COMMAND = "forcelink";
+	private static final String COMMAND = "force-link";
 	private final MongoUserService mongoUserService;
 	private final MojangAPI mojangAPI;
 	private final TaskScheduler taskScheduler;
