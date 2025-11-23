@@ -4,8 +4,10 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Updates;
+import jakarta.annotation.Nullable;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.jetbrains.annotations.Contract;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -38,8 +40,7 @@ public class MongoUserService {
 		usersCollection.updateOne(
 				Filters.eq("discordId", discordId),
 				Updates.combine(
-						Updates.set("minecraftUuid", minecraftUuid.toString()),
-						Updates.setOnInsert("status", UserStatus.OUTSIDER.name())
+						Updates.set("minecraftUuid", minecraftUuid.toString())
 				),
 				new UpdateOptions().upsert(true)
 		);
@@ -58,6 +59,7 @@ public class MongoUserService {
 		return users;
 	}
 
+	/// May return a null value, check with isUserLinked, set a field to ensure non-null, or do null-checks on this return.
 	public NinetalesUser getUser(long discordId) {
 		Document doc = usersCollection.find(Filters.eq("discordId", discordId)).first();
 		return documentToUser(doc);
@@ -112,11 +114,11 @@ public class MongoUserService {
 		return userDoc != null;
 	}
 
-	public boolean unlinkUser(long discordId) {
+	public boolean deleteUser(long discordId) {
 		return usersCollection.deleteOne(Filters.eq("discordId", discordId)).getDeletedCount() > 0;
 	}
 
-	public boolean unlinkUser(UUID minecraftUuid) {
+	public boolean deleteUser(UUID minecraftUuid) {
 		return usersCollection.deleteOne(Filters.eq("minecraftUuid", minecraftUuid.toString())).getDeletedCount() > 0;
 	}
 
@@ -144,11 +146,11 @@ public class MongoUserService {
 		);
 	}
 
-	public void setStatus(long discordId, UserStatus status) {
+	public void setDiscordMember(long discordId, boolean b) {
 		ensureUserExists(discordId);
 		usersCollection.updateOne(
 				Filters.eq("discordId", discordId),
-				Updates.set("status", status.name())
+				Updates.set("discordMember", b)
 		);
 	}
 
@@ -163,8 +165,7 @@ public class MongoUserService {
 	private void ensureUserExists(long discordId) {
 		if (!isUserLinked(discordId)) {
 			Document userDoc = new Document()
-					.append("discordId", discordId)
-					.append("status", UserStatus.OUTSIDER.name());
+					.append("discordId", discordId);
 			usersCollection.insertOne(userDoc);
 		}
 	}
@@ -186,9 +187,7 @@ public class MongoUserService {
 		ninetalesUser.setGuildApplicationChannelId(doc.getLong("guildApplicationChannelId"));
 		ninetalesUser.setQuestionChannelId(doc.getLong("questionChannelId"));
 		ninetalesUser.setAwaitingHypixelInvite(doc.getBoolean("awaitingHypixelInvite", false));
-
-		String statusStr = doc.getString("status");
-		ninetalesUser.setStatus(statusStr != null ? UserStatus.valueOf(statusStr) : UserStatus.OUTSIDER);
+		ninetalesUser.setAwaitingHypixelInvite(doc.getBoolean("discordMember", false));
 
 		return ninetalesUser;
 	}

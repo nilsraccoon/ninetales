@@ -7,13 +7,19 @@ import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
+import ws.mia.ninetales.discord.GuildRankService;
 import ws.mia.ninetales.discord.command.SlashCommand;
+import ws.mia.ninetales.hypixel.CachedHypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -25,14 +31,17 @@ public class LinkCommand extends SlashCommand {
 	private final HypixelAPI hypixelAPI;
 	private final MongoUserService mongoUserService;
 	private final EnvironmentService environmentService;
+	private final TaskScheduler taskScheduler;
+	private final GuildRankService guildRankService;
 
-	public LinkCommand(MojangAPI mojangAPI, HypixelAPI hypixelAPI, MongoUserService mongoUserService, EnvironmentService environmentService) {
+	public LinkCommand(MojangAPI mojangAPI, HypixelAPI hypixelAPI, MongoUserService mongoUserService, EnvironmentService environmentService, TaskScheduler taskScheduler, @Lazy GuildRankService guildRankService) {
 		super();
 		this.mojangAPI = mojangAPI;
 		this.hypixelAPI = hypixelAPI;
 		this.mongoUserService = mongoUserService;
 		this.environmentService = environmentService;
-
+		this.taskScheduler = taskScheduler;
+		this.guildRankService = guildRankService;
 	}
 
 	@Override
@@ -69,7 +78,7 @@ public class LinkCommand extends SlashCommand {
 		String expectedDiscord = hypixelAPI.getDiscord(mojangUuid);
 
 		if (expectedDiscord == null) {
-			event.reply("We couldn't find a discord on your Hypixel profile.\nPlease link your discord on Hypixel using the method above <3").setEphemeral(true).queue();
+			event.reply("We couldn't find a discord on your Hypixel profile.\nPlease link your discord on Hypixel using the method above <3\n-# (Hypixel may take a moment to update your information, if you have linked on hypixel and are seeing this, please wait a moment and try again)").setEphemeral(true).queue();
 			return;
 		}
 
@@ -87,8 +96,12 @@ public class LinkCommand extends SlashCommand {
 		event.reply("Successfully linked you to `" + username.getAsString() + "`!\nWelcome to Ninetales :3").setEphemeral(true).queue();
 		log.info("Linked {} (IGN) to {} (Discord)", username.getAsString(), event.getUser().getName());
 
-		// sync roles after DB has updated
-//		taskScheduler.schedule(guildRankService::syncRoles, Instant.now().plusSeconds(5));
+		hypixelAPI.getGuildRanks();
+
+		// sync roles once DB has updated
+		taskScheduler.schedule(() -> {
+			guildRankService.syncFirstRole(Objects.requireNonNull(event.getMember()), event.getGuild());
+		}, Instant.now().plusSeconds(2));
 	}
 
 

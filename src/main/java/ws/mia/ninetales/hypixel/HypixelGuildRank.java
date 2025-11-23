@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
 
 public enum HypixelGuildRank {
-	GUILD_MASTER("Guild Master", EnvironmentServiceInjector.environmentService.getGuildMasterRoleId()),
+	GUILD_MASTER("Guild Master", EnvironmentServiceInjector.environmentService.getTailRoleId()),
 	TAIL("Tails", EnvironmentServiceInjector.environmentService.getTailRoleId()),
 	VULPIX("Vulpix", EnvironmentServiceInjector.environmentService.getVulpixRoleId()),
 	EGG("Egg", EnvironmentServiceInjector.environmentService.getEggRoleId());

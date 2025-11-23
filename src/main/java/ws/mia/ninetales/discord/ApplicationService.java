@@ -1,28 +1,34 @@
 package ws.mia.ninetales.discord;
 
+import com.mongodb.client.MongoClient;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.UserSnowflake;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.requests.restaction.ChannelAction;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.EnvironmentService;
+import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
-import ws.mia.ninetales.mongo.UserStatus;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 @Service
 public class ApplicationService {
+
+	private static final List<String> GUILD_APPLICATION_PRE_PROCESS = List.of(
+			"Thank you for considering Ninetales! To ensure you have the best application possible, try to answer in as much detail as you're comfortable with. Genuine reasons and experiences will go a long way; every little detail helps Ninetales staff accept you. However, If you don't know how to answer a question or need any clarification, please don't hesitate to ask :3"
+	);
 
 	private static final List<String> GUILD_APPLICATION_PROCESS = List.of(
 			"- 1. Why Ninetales? (what stood out?)",
@@ -31,19 +37,29 @@ public class ApplicationService {
 			"- 4. Anything else you want to add?"
 	);
 
+	private static final String GUILD_APPLICATION_POST_PROCESS = "Thank you for your application. Please give our <@&Tail>s some time to evaluate it. They'll be with you shortly :3";
+
+	private static final List<String> DISCORD_APPLICATION_PRE_PROCESS = List.of(
+			"Welcome to the Ninetales discord, before you can be verified, please answer the following questions to the best of your ability (the more the better)! Hopefully we'll see you around :3"
+	);
+
 	private static final List<String> DISCORD_APPLICATION_PROCESS = List.of(
 			"- 1. Who are you? (Tell us anything you want to tell!)",
 			"- 2. What brings you here? (Why do you want to be here?)"
 	);
 
+	private static final String DISCORD_APPLICATION_POST_PROCESS = "Thank you for your application. A <@&Tail> will be with you shortly :3";
+
 	private final MongoUserService mongoUserService;
 	private final EnvironmentService environmentService;
 	private final MojangAPI mojangAPI;
+	private final HypixelAPI hypixelAPI;
 
-	public ApplicationService(MongoUserService mongoUserService, EnvironmentService environmentService, MojangAPI mojangAPI) {
+	public ApplicationService(MongoUserService mongoUserService, EnvironmentService environmentService, MojangAPI mojangAPI, HypixelAPI hypixelAPI) {
 		this.mongoUserService = mongoUserService;
 		this.environmentService = environmentService;
 		this.mojangAPI = mojangAPI;
+		this.hypixelAPI = hypixelAPI;
 	}
 
 
@@ -55,7 +71,7 @@ public class ApplicationService {
 		}
 
 		NinetalesUser ntUser = mongoUserService.getUser(user.getIdLong());
-		if (ntUser.getStatus() != UserStatus.OUTSIDER) {
+		if(ntUser.isDiscordMember()) {
 			notOutsiderFailure.accept(ntUser);
 			return false;
 		}
@@ -66,12 +82,14 @@ public class ApplicationService {
 		}
 
 		String mcUsername = mojangAPI.getUsername(ntUser.getMinecraftUuid());
-		if (mcUsername == null) mcUsername = ntUser.getMinecraftUuid().toString();
+		if (mcUsername == null) mcUsername = ntUser.getMinecraftUuid().toString(); // fallback (Mojang API issues)
+
 		prepareUserStaffChannel(guild, user, mcUsername, environmentService.getDiscordApplicationsCategoryId())
-				.setTopic("Ninetales Discord Application for " + mcUsername)
+				.setTopic("Ninetales Visitor Application for **" + mcUsername + "**")
 				.queue(tc -> {
 					mongoUserService.setDiscordApplicationChannelId(user.getIdLong(), tc.getIdLong());
-					sendNextMessage(tc);
+					DISCORD_APPLICATION_PRE_PROCESS.forEach(s -> tc.sendMessage(s).queue());
+					attemptSendNextApplicationProcessMessage(tc);
 					success.accept(tc, ntUser);
 				});
 
@@ -86,7 +104,7 @@ public class ApplicationService {
 		}
 
 		NinetalesUser ntUser = mongoUserService.getUser(user.getIdLong());
-		if (ntUser.getStatus() == UserStatus.GUILD_MEMBER) {
+		if(hypixelAPI.getGuildRanks().containsKey(ntUser.getMinecraftUuid())) {
 			guildMemberFailure.accept(ntUser);
 			return false;
 		}
@@ -97,20 +115,22 @@ public class ApplicationService {
 		}
 
 		String mcUsername = mojangAPI.getUsername(ntUser.getMinecraftUuid());
-		if (mcUsername == null) mcUsername = ntUser.getMinecraftUuid().toString();
+		if (mcUsername == null) mcUsername = ntUser.getMinecraftUuid().toString(); // fallback (Mojang API issues)
+
 		prepareUserStaffChannel(guild, user, mcUsername, environmentService.getGuildApplicationsCategoryId())
-				.setTopic("Ninetales Guild Application for " + mcUsername)
+				.setTopic("Ninetales Guild Application for **" + mcUsername + "**")
 				.queue(tc -> {
 					mongoUserService.setGuildApplicationChannelId(user.getIdLong(), tc.getIdLong());
-					sendNextMessage(tc);
+					GUILD_APPLICATION_PRE_PROCESS.forEach(s -> tc.sendMessage(s).queue());
+					attemptSendNextApplicationProcessMessage(tc);
 					success.accept(tc, ntUser);
 				});
 
 		return true;
 	}
 
-	public boolean createQuestionChannel(User user, Guild guild, Consumer<NinetalesUser> hasChannelFailure, BiConsumer<TextChannel, NinetalesUser> success) {
-		NinetalesUser ntUser = mongoUserService.getUser(user.getIdLong());
+	public boolean createQuestionChannel(User user, Guild guild, Consumer<NinetalesUser> hasChannelFailure, BiConsumer<TextChannel, @Nullable NinetalesUser> success) {
+		NinetalesUser ntUser = mongoUserService.getUser(user.getIdLong()); // may be null
 
 		if (ntUser != null && ntUser.getQuestionChannelId() != null) {
 			hasChannelFailure.accept(ntUser);
@@ -125,6 +145,13 @@ public class ApplicationService {
 		return true;
 	}
 
+	/**
+	 * Provides common validation for whether a user has permission to Accept/Deny applications. <br>
+	 * (only Tails can do this, in application channels) <br>
+	 * This method also replies to the event in case of failed validation.
+	 * @param event The deny or accept command
+	 * @return Null and an event reply if validation fails, or a `NinetalesUser` object for the user whose application this is if validation is successful
+	 */
 	private NinetalesUser applicationAcceptDenyValidation(SlashCommandInteractionEvent event) {
 		if (Objects.requireNonNull(event.getMember()).getUnsortedRoles().stream().noneMatch(r -> r.getId().equals(environmentService.getTailRoleId()))) {
 			event.reply("Hey! You can't do that! :p").setEphemeral(true).queue();
@@ -136,102 +163,15 @@ public class ApplicationService {
 			event.reply("Run this in an application channel :3").setEphemeral(true).queue();
 			return null;
 		}
+
 		return ntUser;
 	}
 
-	public void acceptApplication(SlashCommandInteractionEvent event) {
-		NinetalesUser ntUser = applicationAcceptDenyValidation(event);
-		if (ntUser == null) return;
-
-		boolean isGuildApp = ntUser.getGuildApplicationChannelId() != null; // if false, it's a discord app
-		if (!isGuildApp && ntUser.getDiscordApplicationChannelId() == null)
-			throw new RuntimeException("uhh " + ntUser.toString());
-
-		if(isGuildApp) {
-			acceptGuildApplication(event, ntUser);
-		} else {
-			acceptDiscordApplication(event, ntUser);
-		}
-	}
-
-	private void acceptDiscordApplication(SlashCommandInteractionEvent event, NinetalesUser ntUser) {
-		event.getGuild().getTextChannelById(environmentService.getDiscordJoinMessageChannelId())
-				.sendMessage("Welcome to Ninetales <@%s>!".formatted(ntUser.getDiscordId()))
-				.queue();
-
-		OptionMapping optMessage = event.getOption("message");
-
-		Objects.requireNonNull(event.getGuild()).retrieveMemberById(ntUser.getDiscordId()).queue(member -> {
-			member.getUser().openPrivateChannel().queue(p -> {
-				p.sendMessage("After careful consideration by our staff team, your application to join the Ninetales discord has been **accepted**!\nWelcome :3")
-						.queue();
-				if (optMessage != null && !optMessage.getAsString().isBlank()) {
-					p.sendMessage("A message from our tails: " + optMessage.getAsString()).queue();
-				}
-
-				mongoUserService.setDiscordApplicationChannelId(ntUser.getDiscordId(), null);
-
-				mongoUserService.setStatus(ntUser.getDiscordId(), UserStatus.DISCORD_MEMBER);
-				Objects.requireNonNull(
-						event.getGuild()).addRoleToMember(UserSnowflake.fromId(event.getUser().getId()),
-						Objects.requireNonNull(event.getGuild().getRoleById(environmentService.getVisitorRoleId()))
-				).queue();
-			}, (t) -> event.reply("Failed to accept :(\n" + t.toString()).setEphemeral(true).queue());
-		});
-	}
-
-	private void acceptGuildApplication(SlashCommandInteractionEvent event, NinetalesUser ntUser) {
-		OptionMapping optMessage = event.getOption("message");
-
-		Objects.requireNonNull(event.getGuild()).retrieveMemberById(ntUser.getDiscordId()).queue(member -> {
-			member.getUser().openPrivateChannel().queue(p -> {
-
-				p.sendMessage("After careful consideration by our staff team, your application to join Ninetales has been **accepted**!\nWelcome to the guild <3")
-						.queue();
-				if (optMessage != null && !optMessage.getAsString().isBlank()) {
-					p.sendMessage("A message from our tails: " + optMessage.getAsString()).queue();
-				}
-
-				event.getChannel().asTextChannel().sendMessage("Your application has been accepted! Accept your Hypixel invite.").queue();
-				event.reply("Accepted :3\nOnce the player has successfully joined the guild, you can run /close-accepted-app here ^w^").setEphemeral(true).queue();
-
-				mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), true);
-
-				mongoUserService.setStatus(ntUser.getDiscordId(), UserStatus.GUILD_MEMBER);
-				Objects.requireNonNull(
-						event.getGuild()).removeRoleFromMember(UserSnowflake.fromId(event.getUser().getId()),
-						Objects.requireNonNull(event.getGuild().getRoleById(environmentService.getVisitorRoleId()))
-				).queue();
-			}, (t) -> event.reply("Failed to accept :(\n" + t.toString()).setEphemeral(true).queue());
-		});
-
-	}
-
 	/**
-	 * Close an already accepted application channel once the player has been successfully managed to join.
+	 * Common accept application helper for discord and guild applications
+	 * @param event /accept-app command which this is run through
 	 */
-	public void closeAcceptedGuildApplication(SlashCommandInteractionEvent event) {
-		NinetalesUser ntUser = applicationAcceptDenyValidation(event);
-		if (ntUser == null) return;
-
-		if (!ntUser.isAwaitingHypixelInvite()) {
-			event.reply("That user isn't awaiting an invite. Did you mean to /accept-app?").setEphemeral(true).queue();
-			return;
-		}
-
-		if (environmentService.getGuildJoinMessageChannelId() != null) {
-			event.getGuild().getTextChannelById(environmentService.getGuildJoinMessageChannelId())
-					.sendMessage("<@%s> has joined the guild!".formatted(ntUser.getDiscordId()))
-					.queue();
-		}
-
-		mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
-		mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), false);
-		event.getChannel().asTextChannel().delete().queue();
-
-	}
-
-	public void denyApplication(SlashCommandInteractionEvent event) {
+	public void acceptApplication(SlashCommandInteractionEvent event) {
 		NinetalesUser ntUser = applicationAcceptDenyValidation(event);
 		if (ntUser == null) return;
 
@@ -240,15 +180,39 @@ public class ApplicationService {
 			throw new RuntimeException("uhh " + ntUser.toString());
 		}
 
+		OptionMapping optMessage = event.getOption("message");
+		Optional<String> msg = optMessage != null ? Optional.of(optMessage.getAsString()) : Optional.empty();
+
+		if(isGuildApp) {
+			acceptGuildApplication(ntUser, Objects.requireNonNull(event.getGuild()), msg, event.getChannel().asTextChannel());
+			event.reply("Accepted :3\nOnce the player has successfully joined the guild, you can run /close-accepted-app here ^w^").setEphemeral(true).queue();
+		} else {
+			acceptDiscordApplication(ntUser, Objects.requireNonNull(event.getGuild()), msg);
+		}
+	}
+
+	/**
+	 * Common accept deny helper for discord and guild applications
+	 * @param event /deny-app command which this is run through
+	 */
+	public void denyApplication(SlashCommandInteractionEvent event) {
+		NinetalesUser ntUser = applicationAcceptDenyValidation(event);
+		if (ntUser == null) return;
+
+		boolean isGuildApp = ntUser.getGuildApplicationChannelId() != null; // if false, it's a discord app
+		if (!isGuildApp && ntUser.getDiscordApplicationChannelId() == null) {
+			throw new RuntimeException("uhh " + ntUser);
+		}
+
 		OptionMapping optMessage = event.getOption("reason");
 
 		event.getGuild().retrieveMemberById(ntUser.getDiscordId()).queue(member -> {
 			member.getUser().openPrivateChannel().queue(p -> {
 				if (isGuildApp) {
-					p.sendMessage("After careful consideration by our staff team, your application to join the Ninetales guild has been **denied**.")
+					p.sendMessage("After careful consideration by our tails, your application to join the Ninetales guild has been **denied**.")
 							.queue();
 				} else {
-					p.sendMessage("After careful consideration by our staff team, your application to join the Ninetales discord has been **denied**.")
+					p.sendMessage("After careful consideration by our tails, your application to join the Ninetales discord has been **denied**.")
 							.queue();
 				}
 
@@ -263,27 +227,103 @@ public class ApplicationService {
 
 	}
 
-	public void sendNextMessage(TextChannel channel) {
-		NinetalesUser user = mongoUserService.getUserByApplicationChannelId(channel.getIdLong());
-		if(user == null) return;
+	private void acceptDiscordApplication(NinetalesUser ntApplicant, Guild guild, Optional<String> message) {
+		guild.getTextChannelById(environmentService.getDiscordJoinMessageChannelId())
+				.sendMessage("Welcome to Ninetales <@%s>!".formatted(ntApplicant.getDiscordId()))
+				.queue();
 
-		boolean isGuildApp = user.getGuildApplicationChannelId() != null;
+		guild.retrieveMemberById(ntApplicant.getDiscordId()).queue(member -> {
+			member.getUser().openPrivateChannel().queue(p -> {
+				p.sendMessage("After careful consideration by our staff team, your application to join the Ninetales discord has been **accepted**!\nWelcome :3")
+						.queue();
 
-		if(!isGuildApp && user.getDiscordApplicationChannelId() == null) {
-			throw new RuntimeException("huh " + user);
+				message.ifPresent(msg -> p.sendMessage("A message from our tails: " + msg).queue());
+
+				mongoUserService.setDiscordApplicationChannelId(ntApplicant.getDiscordId(), null);
+				mongoUserService.setDiscordMember(ntApplicant.getDiscordId(), true);
+
+				// give visitor role
+				guild.addRoleToMember(member, guild.getRoleById(environmentService.getVisitorRoleId())).queue();
+
+			}, (t) -> {
+				throw new RuntimeException(t);
+			});
+		});
+	}
+
+	private void acceptGuildApplication(NinetalesUser ntApplicant, Guild guild, Optional<String> message, TextChannel appChannel) {
+		guild.retrieveMemberById(ntApplicant.getDiscordId()).queue(member -> {
+			member.getUser().openPrivateChannel().queue(p -> {
+
+				p.sendMessage("After careful consideration by our staff team, your application to join Ninetales has been **accepted**!\nWelcome to the guild <3")
+						.queue();
+				message.ifPresent(msg -> p.sendMessage("A message from our tails: " + msg).queue());
+
+				appChannel.sendMessage("<@%s> Your application has been accepted! Please accept your Hypixel invite.".formatted(ntApplicant.getDiscordId())).queue();
+
+				mongoUserService.setAwaitingHypixelInvite(ntApplicant.getDiscordId(), true);
+				mongoUserService.setDiscordMember(ntApplicant.getDiscordId(), true); // if they're not already
+
+				// do role stuff and global message stuff in #closeAcceptedGuildApplication
+			}, (t) -> {
+				throw new RuntimeException(t);
+			});
+		});
+
+	}
+
+	/**
+	 * Close an already accepted application channel once the player has been successfully managed to join.
+	 */
+	public void attemptCloseAcceptedGuildApplication(SlashCommandInteractionEvent event) {
+		NinetalesUser ntUser = applicationAcceptDenyValidation(event);
+		if (ntUser == null) return;
+
+		if (!ntUser.isAwaitingHypixelInvite()) {
+			event.reply("That user isn't awaiting an invite. Did you mean to /accept-app?").setEphemeral(true).queue();
+			return;
 		}
+
+		event.getGuild().modifyMemberRoles(event.getGuild().retrieveMemberById(ntUser.getDiscordId()).complete(),
+				List.of(event.getGuild().getRoleById(environmentService.getEggRoleId()), event.getGuild().getRoleById(environmentService.getGuildMemberRoleId())),
+				List.of(event.getGuild().getRoleById(environmentService.getVisitorRoleId())));
+
+		if (environmentService.getGuildJoinMessageChannelId() != null) {
+			event.getGuild().getTextChannelById(environmentService.getGuildJoinMessageChannelId())
+					.sendMessage("<@%s> has joined the guild!".formatted(ntUser.getDiscordId()))
+					.queue();
+		}
+
+		mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
+		mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), false);
+		event.getChannel().asTextChannel().delete().queue();
+	}
+
+	public void attemptSendNextApplicationProcessMessage(TextChannel channel) {
+		NinetalesUser ntApplicant = mongoUserService.getUserByApplicationChannelId(channel.getIdLong());
+		if(ntApplicant == null) return;
+
+		boolean isGuildApp = ntApplicant.getGuildApplicationChannelId() != null;
+		if(!isGuildApp && ntApplicant.getDiscordApplicationChannelId() == null) {
+			throw new RuntimeException("huh " + ntApplicant);
+		}
+
+		// 100 past messages *should* be enough... (we *really* don't expect application channels to be more than a few msgs long)
 		channel.getHistory().retrievePast(100).queue(messages -> {
 			long botMessages = messages.stream()
 					.filter(msg -> msg.getAuthor().equals(channel.getJDA().getSelfUser()))
 					.count();
 
+			botMessages -= (isGuildApp) ? GUILD_APPLICATION_PRE_PROCESS.size() : DISCORD_APPLICATION_PRE_PROCESS.size();
 			List<String> process = isGuildApp ? GUILD_APPLICATION_PROCESS : DISCORD_APPLICATION_PROCESS;
 
 			if (botMessages < process.size()) {
 				channel.sendMessage(process.get((int) botMessages)).queue();
 			}
 			if (botMessages == process.size()) {
-				channel.sendMessage("<@&" + environmentService.getTailRoleId() + ">").setAllowedMentions(List.of(Message.MentionType.ROLE)).queue();
+				String postProcess = isGuildApp ? GUILD_APPLICATION_POST_PROCESS : DISCORD_APPLICATION_POST_PROCESS;
+				postProcess = postProcess.replace("<@&Tail>", "<@&"+environmentService.getTailRoleId()+">");
+				channel.sendMessage(postProcess).setAllowedMentions(List.of(Message.MentionType.ROLE)).queue();
 			}
 
 		});

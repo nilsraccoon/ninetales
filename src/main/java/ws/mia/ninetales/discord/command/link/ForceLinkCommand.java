@@ -7,11 +7,16 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.stereotype.Component;
+import ws.mia.ninetales.discord.GuildRankService;
 import ws.mia.ninetales.discord.command.SlashCommand;
 import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Component
@@ -19,11 +24,15 @@ public class ForceLinkCommand extends SlashCommand {
 	private static final String COMMAND = "forcelink";
 	private final MongoUserService mongoUserService;
 	private final MojangAPI mojangAPI;
+	private final TaskScheduler taskScheduler;
+	private final GuildRankService guildRankService;
 
-	public ForceLinkCommand(MongoUserService mongoUserService, MojangAPI mojangAPI) {
+	public ForceLinkCommand(MongoUserService mongoUserService, MojangAPI mojangAPI, TaskScheduler taskScheduler, @Lazy GuildRankService guildRankService) {
 		super();
 		this.mongoUserService = mongoUserService;
 		this.mojangAPI = mojangAPI;
+		this.taskScheduler = taskScheduler;
+		this.guildRankService = guildRankService;
 	}
 
 	@Override
@@ -70,6 +79,12 @@ public class ForceLinkCommand extends SlashCommand {
 					.setEphemeral(true).queue();
 			return;
 		}
+
+		taskScheduler.schedule(() -> {
+			event.getGuild().retrieveMemberById(user.getId()).queue(member -> {
+				guildRankService.syncFirstRole(member, event.getGuild());
+			});
+		}, Instant.now().plusSeconds(2));
 
 		event.reply("Successfully linked `" + mcUuid + "` (MC) to `" + user.getIdLong() + "` (Discord)")
 				.setEphemeral(true).queue();

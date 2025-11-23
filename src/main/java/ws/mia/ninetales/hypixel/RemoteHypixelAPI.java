@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @Service
-public class RemoteHypixelAPI implements HypixelAPI{ // TODO CACHE!!!!!
+public class RemoteHypixelAPI implements HypixelAPI{
 	private static final Logger log = LoggerFactory.getLogger(RemoteHypixelAPI.class);
 
 	private final ObjectMapper objectMapper;

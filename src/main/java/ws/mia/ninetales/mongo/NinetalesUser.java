@@ -10,20 +10,18 @@ public class NinetalesUser {
 	private Long guildApplicationChannelId;
 	private boolean awaitingHypixelInvite;
 	private Long questionChannelId;
-	private UserStatus status;
+	private boolean discordMember;
 
 	public NinetalesUser() {
 	}
 
 	public NinetalesUser(long discordId) {
 		this.discordId = discordId;
-		this.status = UserStatus.OUTSIDER;
 	}
 
 	public NinetalesUser(long discordId, UUID minecraftUuid) {
 		this.discordId = discordId;
 		this.minecraftUuid = minecraftUuid;
-		this.status = UserStatus.OUTSIDER;
 	}
 
 	public long getDiscordId() {
@@ -42,12 +40,12 @@ public class NinetalesUser {
 		return guildApplicationChannelId;
 	}
 
-	public UserStatus getStatus() {
-		return status;
-	}
-
 	public Long getQuestionChannelId() {
 		return questionChannelId;
+	}
+
+	public boolean isDiscordMember() {
+		return discordMember;
 	}
 
 	protected void setDiscordId(long discordId) {
@@ -66,8 +64,8 @@ public class NinetalesUser {
 		this.guildApplicationChannelId = guildApplicationChannelId;
 	}
 
-	protected void setStatus(UserStatus status) {
-		this.status = status;
+	protected void setDiscordMember(boolean b) {
+		this.discordMember = b;
 	}
 
 	protected void setQuestionChannelId(Long questionChannelId) {
@@ -80,18 +78,5 @@ public class NinetalesUser {
 
 	protected void setAwaitingHypixelInvite(boolean awaitingHypixelInvite) {
 		this.awaitingHypixelInvite = awaitingHypixelInvite;
-	}
-
-	@Override
-	public String toString() {
-		return "NinetalesUser{" +
-				"discordId=" + discordId +
-				", minecraftUuid=" + minecraftUuid +
-				", discordApplicationChannelId=" + discordApplicationChannelId +
-				", guildApplicationChannelId=" + guildApplicationChannelId +
-				", awaitingHypixelInvite=" + awaitingHypixelInvite +
-				", questionChannelId=" + questionChannelId +
-				", status=" + status +
-				'}';
 	}
 }

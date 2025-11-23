@@ -15,7 +15,7 @@ import java.net.http.HttpResponse;
 import java.util.UUID;
 
 @Service
-public class RemoteMojangAPI implements MojangAPI { //TODO cache
+public class RemoteMojangAPI implements MojangAPI {
 	private static final Logger log = LoggerFactory.getLogger(RemoteMojangAPI.class);
 	private final HttpClient httpClient;
 	private final ObjectMapper objectMapper;

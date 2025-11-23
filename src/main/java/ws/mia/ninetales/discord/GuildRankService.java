@@ -2,6 +2,7 @@ package ws.mia.ninetales.discord;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,6 @@ import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelGuildRank;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
-import ws.mia.ninetales.mongo.UserStatus;
 
 import java.util.*;
 
@@ -32,67 +32,78 @@ public class GuildRankService {
 		this.mongoUserService = mongoUserService;
 	}
 
-	@Scheduled(fixedRate = 1000 * 60 * 10L) //10mins
+	@Scheduled(fixedRate = 1000 * 60 * 3L) // 3mins so we hit API cache
 	public void syncRoles() {
 		log.debug("Performing role sync");
 
 		Guild guild = jda.getGuildById(environmentService.getDiscordGuildId());
-		if (guild == null) {
-			log.warn("Discord guild not found ({})", environmentService.getDiscordGuildId());
-			return;
-		}
 
 		Map<UUID, HypixelGuildRank> ranks = hypixelAPI.getGuildRanks();
 		if (ranks == null) return;
 
 		List<NinetalesUser> allNtUsers = mongoUserService.getAllUsers();
 
-
 		guild.retrieveMembersByIds(false, allNtUsers.stream().map(NinetalesUser::getDiscordId).toList())
 				.onSuccess(members -> {
 					members.forEach(dcMember -> {
+
 						NinetalesUser ntUser = allNtUsers.stream().filter(a -> a.getDiscordId() == dcMember.getIdLong()).findFirst().orElse(null);
 						if(ntUser == null) return;
 						if(ntUser.getMinecraftUuid() == null) return;
 						HypixelGuildRank rank = ranks.get(ntUser.getMinecraftUuid());
-						Role gMemberRole = Objects.requireNonNull(guild.getRoleById(environmentService.getGuildMemberRoleId()));
-						List<Role> allRoles = new ArrayList<>(List.of(HypixelGuildRank.EGG.getRole(guild),
+
+						Role guildMemberRole = Objects.requireNonNull(guild.getRoleById(environmentService.getGuildMemberRoleId()));
+						Role visitorRole = Objects.requireNonNull(guild.getRoleById(environmentService.getVisitorRoleId()));
+
+						List<Role> allGuildRoles = new ArrayList<>(List.of(HypixelGuildRank.EGG.getRole(guild),
 								HypixelGuildRank.VULPIX.getRole(guild),
 								HypixelGuildRank.TAIL.getRole(guild),
 								HypixelGuildRank.GUILD_MASTER.getRole(guild),
-								gMemberRole));
+								guildMemberRole));
 
-						if(rank == null) {
-							if(ntUser.getStatus() == UserStatus.GUILD_MEMBER) {
-								mongoUserService.setStatus(ntUser.getDiscordId(), UserStatus.DISCORD_MEMBER);
+						if(rank == null) { // not in the guild
+							List<Role> rolesToAdd = new ArrayList<>();
+							if(ntUser.isDiscordMember()) {
+								rolesToAdd.add(visitorRole);
 							}
 
-							List<Role> toAdd = new ArrayList<>();
-							if(ntUser.getStatus() == UserStatus.DISCORD_MEMBER) {
-								toAdd.add(guild.getRoleById(environmentService.getVisitorRoleId()));
-							}
-							// no rank, remove if they have
-							guild.modifyMemberRoles(dcMember, toAdd, allRoles).queue();
+							guild.modifyMemberRoles(dcMember, rolesToAdd, allGuildRoles).queue();
+							return;
 						}
 
-						if(rank != null) { // is a guild member
-							allRoles.removeIf(r -> r.getId().equals(rank.getDiscordRoleId()));
-							allRoles.remove(gMemberRole);
-							allRoles.add(guild.getRoleById(environmentService.getVisitorRoleId()));
+						// is a guild member
+						List<Role> rolesToRemove = allGuildRoles;
+						rolesToRemove.removeIf(r -> r.getId().equals(rank.getDiscordRoleId()));
+						rolesToRemove.add(visitorRole);
+						List<Role> rolesToAdd = List.of(rank.getRole(guild), guildMemberRole);
+						rolesToRemove.removeAll(rolesToAdd); // We want to add the intersection. (since GM role is the same as Tail role)
 
-							guild.modifyMemberRoles(dcMember,
-									List.of(rank.getRole(guild), gMemberRole),
-									allRoles).queue();
+						guild.modifyMemberRoles(dcMember,
+								rolesToAdd,
+								rolesToRemove).queue();
+						mongoUserService.setDiscordMember(ntUser.getDiscordId(), true);
 
-							mongoUserService.setStatus(ntUser.getDiscordId(), UserStatus.GUILD_MEMBER);
-						}
 					});
-
 				})
-				.onError((t) -> {
-					log.warn("Failed to retrieve members", t);
-				});
+				.onError((t) -> log.warn("Failed to retrieve members", t));
+	}
 
+	// Doesn't remove any roles. Primarily for linking
+	public void syncFirstRole(Member userToSync, Guild guild) {
+		NinetalesUser user = mongoUserService.getUser(userToSync.getIdLong());
+		if(user == null) {
+			throw new RuntimeException(user.toString());
+		}
+		HypixelGuildRank rank = hypixelAPI.getGuildRanks().get(user.getMinecraftUuid());
+		if(rank == null) {
+			mongoUserService.setDiscordMember(user.getDiscordId(), false);
+			return;
+		}
+
+		mongoUserService.setDiscordMember(user.getDiscordId(), true);
+		guild.modifyMemberRoles(userToSync,
+				List.of(guild.getRoleById(environmentService.getGuildMemberRoleId()), rank.getRole(guild)), List.of())
+				.queue();
 	}
 
 }
