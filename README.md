@@ -3,6 +3,7 @@ A spring application for the discord bot managing **Ninetales** Hypixel guild me
 
 **Guild Thread:** [✧ Ninetales ✧](https://hypixel.net/threads/%E2%9C%84-ninetales-%E2%9C%84-tale-%E2%9C%84-a-little-corner-of-the-internet-%E2%9C%84-level-56-%E2%9C%84.5966032/)
 
+---
 
 ## Environment Variables
 
@@ -25,6 +26,8 @@ A spring application for the discord bot managing **Ninetales** Hypixel guild me
 | `LINK_CHANNEL_ID`                  | ✅        | -       | Channel ID where `/link` command can be used  |
 | `DISCORD_JOIN_MESSAGE_CHANNEL_ID`  | ✅        | -       | Channel ID for Discord join messages          |
 | `GUILD_JOIN_MESSAGE_CHANNEL_ID`    | ❌        | -       | Channel ID for guild join messages (optional) |
+
+---
 
 ## Overview
 ### Automatic Role Synchronization
@@ -51,11 +54,13 @@ A spring application for the discord bot managing **Ninetales** Hypixel guild me
 4. For accepted apps: Tail invites to guild, then when the player has joined, run `/close-accepted-app`
 5. Channel is automatically deleted after closure
 
-## Caching
+### Caching
 - **Hypixel API**: 5-minute cache for Discord usernames and guild ranks
 - **Mojang API**: 30-minute cache for username ↔ UUID lookups
 - Cache automatically invalidates on username changes
 - Failed API calls are not cached
+
+---
 
 ## Commands
 ### Admin Commands
@@ -74,8 +79,9 @@ A spring application for the discord bot managing **Ninetales** Hypixel guild me
 ### Public Commands
 - `/link <minecraft username>` - Link your Discord account to your Minecraft account 
 
-## Database Schema (MongoDB)
+---
 
+## Database Schema (MongoDB)
 ### Users Collection
 ```javascript
 {
