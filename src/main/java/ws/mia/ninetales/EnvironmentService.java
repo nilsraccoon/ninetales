@@ -9,11 +9,11 @@ import java.util.Objects;
 public class EnvironmentService {
 
 	public String getMongoUri() {
-		return Objects.requireNonNull(System.getenv("NINETALES_MONGO_URI"));
+		return Objects.requireNonNull(System.getenv("MONGO_URI"));
 	}
 
 	public String getMongoUsersCollectionName() {
-		String env = System.getenv("NINETALES_USERS_COLLECTION_NAME");
+		String env = System.getenv("MONGO_USERS_COLLECTION_NAME");
 		 return env != null	? env : "users";
 	}
 

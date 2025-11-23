@@ -8,16 +8,16 @@ A spring application for the discord bot managing **Ninetales** Hypixel guild me
 
 | Variable                           | Required | Default | Description                                   |
 |------------------------------------|----------|---------|-----------------------------------------------|
-| `NINETALES_MONGO_URI`              | ✅        | -       | MongoDB connection URI                        |
-| `NINETALES_USERS_COLLECTION_NAME`  | ❌        | `users` | MongoDB collection name for user data         |
+| `MONGO_URI`                        | ✅        | -       | MongoDB connection URI                        |
+| `MONGO_USERS_COLLECTION_NAME`      | ❌        | `users` | MongoDB collection name for user data         |
 | `HYPIXEL_API_KEY`                  | ✅        | -       | Hypixel API key for guild/player data         |
 | `HYPIXEL_GUILD_ID`                 | ✅        | -       | Hypixel guild ID to monitor                   |
 | `DISCORD_BOT_TOKEN`                | ✅        | -       | Discord bot token                             |
 | `DISCORD_GUILD_ID`                 | ✅        | -       | Discord server/guild ID                       |
-| `GUILD_APPLICATIONS_CATEGORY_ID`   | ✅        | -       | Category ID for guild application channels    |
+| `GUILD_APPLICATIONS_CATEGORY_ID`   | ✅        | -       | Category ID for Guild application channels    |
 | `DISCORD_APPLICATIONS_CATEGORY_ID` | ✅        | -       | Category ID for Discord application channels  |
 | `QUESTIONS_CATEGORY_ID`            | ✅        | -       | Category ID for question channels             |
-| `GUILD_MEMBER_ROLE_ID`             | ✅        | -       | Role ID for guild members                     |
+| `GUILD_MEMBER_ROLE_ID`             | ✅        | -       | Role ID for Guild Members                     |
 | `TAIL_ROLE_ID`                     | ✅        | -       | Role ID for Tail rank                         |
 | `VULPIX_ROLE_ID`                   | ✅        | -       | Role ID for Vulpix rank                       |
 | `EGG_ROLE_ID`                      | ✅        | -       | Role ID for Egg rank                          |

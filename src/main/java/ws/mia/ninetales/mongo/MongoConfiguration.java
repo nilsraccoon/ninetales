@@ -22,7 +22,7 @@ public class MongoConfiguration {
 	public MongoClient mongoClient(EnvironmentService environmentService) {
 		String uri = environmentService.getMongoUri();
 		if (uri == null || uri.isBlank()) {
-			throw new IllegalStateException("NINETALES_MONGO_URI environment variable must be set!");
+			throw new IllegalStateException("MONGO_URI environment variable must be set!");
 		}
 
 		ConnectionString connectionString = new ConnectionString(uri);
@@ -43,7 +43,7 @@ public class MongoConfiguration {
 		ConnectionString connectionString = new ConnectionString(uri);
 		String db = connectionString.getDatabase();
 		if (db == null) {
-			throw new IllegalStateException("No database name specified in NINETALES_MONGO_URI");
+			throw new IllegalStateException("No database name specified in MONGO_URI");
 		}
 		return db;
 	}
