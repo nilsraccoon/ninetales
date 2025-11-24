@@ -228,6 +228,9 @@ public class ApplicationService {
 
 		event.getChannel().asTextChannel().delete().queue();
 
+		mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
+		mongoUserService.setDiscordApplicationChannelId(ntUser.getDiscordId(), null);
+
 		if (ntUser.getTailDiscussionChannelId() != null) {
 			mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), null);
 			event.getGuild().getTextChannelById(ntUser.getTailDiscussionChannelId()).delete().queue();
