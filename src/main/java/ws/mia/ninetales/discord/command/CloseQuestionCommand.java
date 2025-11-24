@@ -5,8 +5,10 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
+import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
@@ -17,11 +19,13 @@ public class CloseQuestionCommand extends SlashCommand{
 	private static final String COMMAND = "close-question";
 	private final MongoUserService mongoUserService;
 	private final EnvironmentService environmentService;
+	private final DiscordLogService discordLogService;
 
-	public CloseQuestionCommand(MongoUserService mongoUserService, EnvironmentService environmentService) {
+	public CloseQuestionCommand(MongoUserService mongoUserService, EnvironmentService environmentService, @Lazy DiscordLogService discordLogService) {
 		super();
 		this.mongoUserService = mongoUserService;
 		this.environmentService = environmentService;
+		this.discordLogService = discordLogService;
 	}
 
 	@Override
@@ -45,6 +49,7 @@ public class CloseQuestionCommand extends SlashCommand{
 
 		mongoUserService.setQuestionChannelId(ntUser.getDiscordId(), null);
 		event.getChannel().asTextChannel().delete().queue();
+		discordLogService.info(event, "Closed message channel for <@" + ntUser.getDiscordId() + ">");
 
 	}
 }

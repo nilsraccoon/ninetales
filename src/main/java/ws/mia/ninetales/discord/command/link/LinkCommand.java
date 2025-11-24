@@ -12,6 +12,7 @@ import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
+import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.ninetales.discord.GuildRankService;
 import ws.mia.ninetales.discord.command.SlashCommand;
 import ws.mia.ninetales.hypixel.CachedHypixelAPI;
@@ -33,8 +34,9 @@ public class LinkCommand extends SlashCommand {
 	private final EnvironmentService environmentService;
 	private final TaskScheduler taskScheduler;
 	private final GuildRankService guildRankService;
+	private final DiscordLogService discordLogService;
 
-	public LinkCommand(MojangAPI mojangAPI, HypixelAPI hypixelAPI, MongoUserService mongoUserService, EnvironmentService environmentService, TaskScheduler taskScheduler, @Lazy GuildRankService guildRankService) {
+	public LinkCommand(MojangAPI mojangAPI, HypixelAPI hypixelAPI, MongoUserService mongoUserService, EnvironmentService environmentService, TaskScheduler taskScheduler, @Lazy GuildRankService guildRankService, @Lazy DiscordLogService discordLogService) {
 		super();
 		this.mojangAPI = mojangAPI;
 		this.hypixelAPI = hypixelAPI;
@@ -42,6 +44,7 @@ public class LinkCommand extends SlashCommand {
 		this.environmentService = environmentService;
 		this.taskScheduler = taskScheduler;
 		this.guildRankService = guildRankService;
+		this.discordLogService = discordLogService;
 	}
 
 	@Override
@@ -65,6 +68,8 @@ public class LinkCommand extends SlashCommand {
 
 		if (mongoUserService.isUserLinked(event.getUser().getIdLong())) {
 			event.reply("You're already linked you goober!\n-# (if you need help, message a tail :3)").setEphemeral(true).queue();
+
+			discordLogService.debug(event, "Tried to link while already linked. What a goober.");
 			return;
 		}
 
@@ -72,6 +77,7 @@ public class LinkCommand extends SlashCommand {
 
 		if (mojangUuid == null) {
 			event.reply("We couldn't find your minecraft account :(\nPlease contact a tail\n-# (blame mia)").setEphemeral(true).queue();
+			discordLogService.debug(event, "Couldn't find requested minecraft account (null response from Mojang API)");
 			return;
 		}
 
@@ -79,11 +85,13 @@ public class LinkCommand extends SlashCommand {
 
 		if (expectedDiscord == null) {
 			event.reply("We couldn't find a discord on your Hypixel profile.\nPlease link your discord on Hypixel using the method above <3\n-# (Hypixel may take a moment to update your information, if you have linked on hypixel and are seeing this, please wait a moment and try again)").setEphemeral(true).queue();
+			discordLogService.debug(event, "Couldn't find discord in Hypixel API");
 			return;
 		}
 
 		if (!expectedDiscord.equals(event.getUser().getName())) {
 			event.reply("That minecraft account isn't linked to your discord!\nFollow the steps above to link your account.").setEphemeral(true).queue();
+			discordLogService.debug(event, "Found wrong discord in Hypixel API (API: `" + expectedDiscord + "`)");
 			return;
 		}
 
@@ -91,12 +99,12 @@ public class LinkCommand extends SlashCommand {
 		if (!mongoUserService.linkUser(event.getUser().getIdLong(), mojangUuid)) {
 			log.warn("Unable to link {} (IGN) to {} (Discord)", username.getAsString(), event.getUser().getName());
 			event.reply("We couldn't link you :(\nThis likely means that you are already linked.\n-# (blame mia)").setEphemeral(true).queue();
+			discordLogService.debug(event, "Tried to link while already linked");
 			return;
 		}
 		event.reply("Successfully linked you to `" + username.getAsString() + "`!\nWelcome to Ninetales :3").setEphemeral(true).queue();
 		log.info("Linked {} (IGN) to {} (Discord)", username.getAsString(), event.getUser().getName());
-
-		hypixelAPI.getGuildRanks();
+		discordLogService.debug(event, "Successfully linked");
 
 		// sync roles once DB has updated
 		taskScheduler.schedule(() -> {

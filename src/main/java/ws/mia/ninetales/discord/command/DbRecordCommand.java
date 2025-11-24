@@ -7,7 +7,9 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
+import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
@@ -15,10 +17,12 @@ import ws.mia.ninetales.mongo.NinetalesUser;
 public class DbRecordCommand extends SlashCommand {
 	private static final String COMMAND = "db-record";
 	private final MongoUserService mongoUserService;
+	private final DiscordLogService discordLogService;
 
-	public DbRecordCommand(MongoUserService mongoUserService) {
+	public DbRecordCommand(MongoUserService mongoUserService, @Lazy DiscordLogService discordLogService) {
 		super();
 		this.mongoUserService = mongoUserService;
+		this.discordLogService = discordLogService;
 	}
 
 	@Override
@@ -36,11 +40,15 @@ public class DbRecordCommand extends SlashCommand {
 
 		NinetalesUser ntUser = mongoUserService.getUser(user.getIdLong());
 		if(ntUser == null) {
-			event.reply("Could not find user record for <@%s>.".formatted(user.getId())).setEphemeral(true).queue();
+			String reply = "Could not find user record for <@%s>.".formatted(user.getId());
+			event.reply(reply).setEphemeral(true).queue();
+			discordLogService.debug(event, reply);
 			return;
 		}
 
-		event.reply("Mongo record for <@%s>:\n```json\n%s\n```".formatted(user.getId(), ntUser.toJsonString())).setEphemeral(true).queue();
+		String reply = "Mongo record for <@%s>:\n```json\n%s\n```".formatted(user.getId(), ntUser.toJsonString());
+		event.reply(reply).setEphemeral(true).queue();
+		discordLogService.debug(event, reply);
 	}
 }
 

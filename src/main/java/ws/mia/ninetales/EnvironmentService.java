@@ -78,4 +78,14 @@ public class EnvironmentService {
 		return System.getenv("GUILD_JOIN_MESSAGE_CHANNEL_ID");
 	}
 
+	@Nullable
+	public String getLogChannelId() {
+		return System.getenv("LOG_CHANNEL_ID");
+	}
+
+	@Nullable
+	public String getDebugLogChannelId() {
+		return System.getenv("DEBUG_LOG_CHANNEL_ID");
+	}
+
 }

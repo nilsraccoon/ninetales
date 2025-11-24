@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.stereotype.Component;
+import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.ninetales.discord.GuildRankService;
 import ws.mia.ninetales.discord.command.SlashCommand;
 import ws.mia.ninetales.mojang.MojangAPI;
@@ -26,13 +27,15 @@ public class ForceLinkCommand extends SlashCommand {
 	private final MojangAPI mojangAPI;
 	private final TaskScheduler taskScheduler;
 	private final GuildRankService guildRankService;
+	private final DiscordLogService discordLogService;
 
-	public ForceLinkCommand(MongoUserService mongoUserService, MojangAPI mojangAPI, TaskScheduler taskScheduler, @Lazy GuildRankService guildRankService) {
+	public ForceLinkCommand(MongoUserService mongoUserService, MojangAPI mojangAPI, TaskScheduler taskScheduler, @Lazy GuildRankService guildRankService, @Lazy DiscordLogService discordLogService) {
 		super();
 		this.mongoUserService = mongoUserService;
 		this.mojangAPI = mojangAPI;
 		this.taskScheduler = taskScheduler;
 		this.guildRankService = guildRankService;
+		this.discordLogService = discordLogService;
 	}
 
 	@Override
@@ -86,8 +89,12 @@ public class ForceLinkCommand extends SlashCommand {
 			});
 		}, Instant.now().plusSeconds(2));
 
-		event.reply("Successfully linked `" + mcUuid + "` (MC) to `" + user.getIdLong() + "` (Discord)")
+		String msg = "Successfully linked <@" + user.getId() + "> to **" + minecraftIgn + "** (`" + mcUuid + "`)";
+
+		event.reply(msg)
 				.setEphemeral(true).queue();
+
+		discordLogService.info(event, msg);
 		return;
 	}
 }

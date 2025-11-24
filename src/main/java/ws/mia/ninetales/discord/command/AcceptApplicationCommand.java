@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.discord.ApplicationService;
+import ws.mia.ninetales.discord.DiscordLogService;
 
 @Component
 public class AcceptApplicationCommand extends SlashCommand {

@@ -8,8 +8,10 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
+import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelGuildRank;
 import ws.mia.ninetales.mojang.MojangAPI;
@@ -25,13 +27,15 @@ public class StatusCommand extends SlashCommand {
 	private final MongoUserService mongoUserService;
 	private final MojangAPI mojangAPI;
 	private final HypixelAPI hypixelAPI;
+	private final DiscordLogService discordLogService;
 
-	public StatusCommand(EnvironmentService environmentService, MongoUserService mongoUserService, MojangAPI mojangAPI, HypixelAPI hypixelAPI) {
+	public StatusCommand(EnvironmentService environmentService, MongoUserService mongoUserService, MojangAPI mojangAPI, HypixelAPI hypixelAPI, @Lazy DiscordLogService discordLogService) {
 		super();
 		this.environmentService = environmentService;
 		this.mongoUserService = mongoUserService;
 		this.hypixelAPI = hypixelAPI;
 		this.mojangAPI = mojangAPI;
+		this.discordLogService = discordLogService;
 	}
 
 	@Override
@@ -93,6 +97,8 @@ public class StatusCommand extends SlashCommand {
 			response.append("\nThey do not have an open application.");
 		}
 
-		event.reply(response.toString()).setEphemeral(true).queue();
+		String reply = response.toString();
+		event.reply(reply).setEphemeral(true).queue();
+		discordLogService.debug(event, reply);
 	}
 }

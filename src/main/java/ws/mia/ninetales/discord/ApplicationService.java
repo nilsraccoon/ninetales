@@ -9,6 +9,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.requests.restaction.ChannelAction;
 import org.jspecify.annotations.Nullable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.EnvironmentService;
 import ws.mia.ninetales.hypixel.HypixelAPI;
@@ -52,12 +53,14 @@ public class ApplicationService {
 	private final EnvironmentService environmentService;
 	private final MojangAPI mojangAPI;
 	private final HypixelAPI hypixelAPI;
+	private final DiscordLogService discordLogService;
 
-	public ApplicationService(MongoUserService mongoUserService, EnvironmentService environmentService, MojangAPI mojangAPI, HypixelAPI hypixelAPI) {
+	public ApplicationService(MongoUserService mongoUserService, EnvironmentService environmentService, MojangAPI mojangAPI, HypixelAPI hypixelAPI, @Lazy DiscordLogService discordLogService) {
 		this.mongoUserService = mongoUserService;
 		this.environmentService = environmentService;
 		this.mojangAPI = mojangAPI;
 		this.hypixelAPI = hypixelAPI;
+		this.discordLogService = discordLogService;
 	}
 
 
@@ -97,6 +100,9 @@ public class ApplicationService {
 							.queue(tailTc -> {
 								mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), tailTc.getIdLong());
 								tailTc.sendMessage("Use this channel to discuss the visitor application in <#%s>".formatted(tc.getIdLong())).queue();
+
+								discordLogService.info("Created Discord application channel", "For <@%s> (%s)\nUser channel: <#%s>\nTail Channel: <#%s>"
+										.formatted(ntUser.getDiscordId(), finalMcUsername, tc.getId(), tailTc.getId()));
 							});
 				});
 
@@ -139,6 +145,9 @@ public class ApplicationService {
 							.queue(tailTc -> {
 								mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), tailTc.getIdLong());
 								tailTc.sendMessage("Use this channel to discuss the guild application in <#%s>".formatted(tc.getIdLong())).queue();
+
+								discordLogService.info("Created Guild application channel", "For <@%s> (%s)\nUser channel: <#%s>\nTail Channel: <#%s>"
+										.formatted(ntUser.getDiscordId(), finalMcUsername, tc.getId(), tailTc.getId()));
 							});
 
 					success.accept(tc, ntUser);
@@ -159,6 +168,9 @@ public class ApplicationService {
 				.queue(tc -> {
 					mongoUserService.setQuestionChannelId(user.getIdLong(), tc.getIdLong());
 					success.accept(tc, ntUser);
+
+					discordLogService.debug("Created Question application channel", "For <@%s> at <#%s>"
+							.formatted(user.getId(), tc.getId()));
 				});
 		return true;
 	}
@@ -206,9 +218,11 @@ public class ApplicationService {
 		if (isGuildApp) {
 			acceptGuildApplication(event.getUser(), ntUser, Objects.requireNonNull(event.getGuild()), msg, event.getChannel().asTextChannel());
 			event.reply("Accepted :3\nOnce the player has successfully joined the guild, you can run /close-accepted-app here ^w^").setEphemeral(true).queue();
+			discordLogService.info(event, "(for <@%s> -> %s)".formatted(ntUser.getDiscordId(), ntUser.getMinecraftUuid()));
 		} else {
 			acceptDiscordApplication(ntUser, Objects.requireNonNull(event.getGuild()), msg);
 			event.reply(":3").setEphemeral(true).queue();
+			discordLogService.info(event, "(for <@%s> -> %s)".formatted(ntUser.getDiscordId(), ntUser.getMinecraftUuid()));
 		}
 	}
 
@@ -228,8 +242,7 @@ public class ApplicationService {
 
 		event.getChannel().asTextChannel().delete().queue();
 
-		mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
-		mongoUserService.setDiscordApplicationChannelId(ntUser.getDiscordId(), null);
+
 
 		if (ntUser.getTailDiscussionChannelId() != null) {
 			mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), null);
@@ -244,8 +257,22 @@ public class ApplicationService {
 							List.of(event.getGuild().getRoleById(environmentService.getVisitorRoleId())))
 					.queue();
 
-			mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), false);
+
+
 		}
+
+		if(ntUser.getGuildApplicationChannelId() != null) {
+			String a = ntUser.isAwaitingHypixelInvite() ? "Accepted" : "Denied";
+			discordLogService.info(event, "%s Hypixel application for <@%s> -> %s".formatted(a, ntUser.getDiscordId(), ntUser.getMinecraftUuid()));
+			mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
+		}
+
+		if(ntUser.getDiscordApplicationChannelId() != null) {
+			discordLogService.info(event, "Denied Discord application for <@%s> -> %s".formatted(ntUser.getDiscordId(), ntUser.getMinecraftUuid()));
+			mongoUserService.setDiscordApplicationChannelId(ntUser.getDiscordId(), null);
+		}
+
+		mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), false);
 	}
 
 	private void acceptDiscordApplication(NinetalesUser ntApplicant, Guild guild, Optional<String> message) {

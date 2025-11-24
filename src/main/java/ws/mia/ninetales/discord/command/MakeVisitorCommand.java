@@ -7,9 +7,11 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
 import ws.mia.ninetales.discord.ApplicationService;
+import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
@@ -19,12 +21,14 @@ public class MakeVisitorCommand extends SlashCommand {
 	private final EnvironmentService environmentService;
 	private final MongoUserService mongoUserService;
 	private final ApplicationService applicationService;
+	private final DiscordLogService discordLogService;
 
-	public MakeVisitorCommand(EnvironmentService environmentService, MongoUserService mongoUserService, ApplicationService applicationService) {
+	public MakeVisitorCommand(EnvironmentService environmentService, MongoUserService mongoUserService, ApplicationService applicationService, @Lazy DiscordLogService discordLogService) {
 		super();
 		this.environmentService = environmentService;
 		this.mongoUserService = mongoUserService;
 		this.applicationService = applicationService;
+		this.discordLogService = discordLogService;
 	}
 
 	@Override
@@ -85,5 +89,6 @@ public class MakeVisitorCommand extends SlashCommand {
 		}
 
 		event.reply("Made <@%s> a visitor :3".formatted(user.getDiscordId())).setEphemeral(true).queue();
+		discordLogService.info(event, "Made <@%s> a visitor".formatted(user.getDiscordId()));
 	}
 }

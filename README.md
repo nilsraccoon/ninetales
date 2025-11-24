@@ -7,25 +7,27 @@ A Spring application for the Discord bot managing **Ninetales** community member
 
 ## Environment Variables
 
-| Variable                           | Required | Default | Description                                   |
-|------------------------------------|----------|---------|-----------------------------------------------|
-| `MONGO_URI`                        | ✅        | -       | MongoDB connection URI                        |
-| `MONGO_USERS_COLLECTION_NAME`      | ❌        | `users` | MongoDB collection name for user data         |
-| `HYPIXEL_API_KEY`                  | ✅        | -       | Hypixel API key for guild/player data         |
-| `HYPIXEL_GUILD_ID`                 | ✅        | -       | Hypixel guild ID to monitor                   |
-| `DISCORD_BOT_TOKEN`                | ✅        | -       | Discord bot token                             |
-| `DISCORD_GUILD_ID`                 | ✅        | -       | Discord server/guild ID                       |
-| `GUILD_APPLICATIONS_CATEGORY_ID`   | ✅        | -       | Category ID for Guild application channels    |
-| `DISCORD_APPLICATIONS_CATEGORY_ID` | ✅        | -       | Category ID for Discord application channels  |
-| `QUESTIONS_CATEGORY_ID`            | ✅        | -       | Category ID for question channels             |
-| `GUILD_MEMBER_ROLE_ID`             | ✅        | -       | Role ID for Guild Members                     |
-| `TAIL_ROLE_ID`                     | ✅        | -       | Role ID for Tail rank                         |
-| `VULPIX_ROLE_ID`                   | ✅        | -       | Role ID for Vulpix rank                       |
-| `EGG_ROLE_ID`                      | ✅        | -       | Role ID for Egg rank                          |
-| `VISITOR_ROLE_ID`                  | ✅        | -       | Role ID for visitors (non-guild members)      |
-| `LINK_CHANNEL_ID`                  | ✅        | -       | Channel ID where `/link` command can be used  |
-| `DISCORD_JOIN_MESSAGE_CHANNEL_ID`  | ✅        | -       | Channel ID for Discord join messages          |
-| `GUILD_JOIN_MESSAGE_CHANNEL_ID`    | ❌        | -       | Channel ID for guild join messages (optional) |
+| Variable                           | Required | Default | Description                                              |
+|------------------------------------|----------|---------|----------------------------------------------------------|
+| `MONGO_URI`                        | ✅        | -       | MongoDB connection URI                                   |
+| `MONGO_USERS_COLLECTION_NAME`      | ❌        | `users` | MongoDB collection name for user data                    |
+| `HYPIXEL_API_KEY`                  | ✅        | -       | Hypixel API key for guild/player data                    |
+| `HYPIXEL_GUILD_ID`                 | ✅        | -       | Hypixel guild ID to monitor                              |
+| `DISCORD_BOT_TOKEN`                | ✅        | -       | Discord bot token                                        |
+| `DISCORD_GUILD_ID`                 | ✅        | -       | Discord server/guild ID                                  |
+| `GUILD_APPLICATIONS_CATEGORY_ID`   | ✅        | -       | Category ID for Guild application channels               |
+| `DISCORD_APPLICATIONS_CATEGORY_ID` | ✅        | -       | Category ID for Discord application channels             |
+| `QUESTIONS_CATEGORY_ID`            | ✅        | -       | Category ID for question channels                        |
+| `GUILD_MEMBER_ROLE_ID`             | ✅        | -       | Role ID for Guild Members                                |
+| `TAIL_ROLE_ID`                     | ✅        | -       | Role ID for Tail rank                                    |
+| `VULPIX_ROLE_ID`                   | ✅        | -       | Role ID for Vulpix rank                                  |
+| `EGG_ROLE_ID`                      | ✅        | -       | Role ID for Egg rank                                     |
+| `VISITOR_ROLE_ID`                  | ✅        | -       | Role ID for visitors (non-guild members)                 |
+| `LINK_CHANNEL_ID`                  | ✅        | -       | Channel ID where `/link` command can be used             |
+| `DISCORD_JOIN_MESSAGE_CHANNEL_ID`  | ✅        | -       | Channel ID for Discord join messages                     |
+| `GUILD_JOIN_MESSAGE_CHANNEL_ID`    | ❌        | -       | Channel ID for guild join messages (optional)            |
+| `LOG_CHANNEL_ID`                   | ❌        | -       | Channel ID for logs of level `INFO` and above (optional) |
+| `DEBUG_LOG_CHANNEL_ID`             | ❌        | -       | Channel ID for logs of level `DEBUG` (optional)          |
 
 ---
 

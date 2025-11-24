@@ -10,9 +10,11 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
 import ws.mia.ninetales.discord.ApplicationService;
+import ws.mia.ninetales.discord.DiscordLogService;
 
 import java.awt.*;
 
@@ -27,11 +29,13 @@ public class PasteWelcomeMessageCommand extends SlashCommand {
 	private static final String BUTTON_ASK_QUESTION_ID = "bNtAskQuestion";
 	private final EnvironmentService environmentService;
 	private final ApplicationService applicationService;
+	private final DiscordLogService discordLogService;
 
-	public PasteWelcomeMessageCommand(EnvironmentService environmentService, ApplicationService applicationService) {
+	public PasteWelcomeMessageCommand(EnvironmentService environmentService, ApplicationService applicationService, @Lazy DiscordLogService discordLogService) {
 		super();
 		this.environmentService = environmentService;
 		this.applicationService = applicationService;
+		this.discordLogService = discordLogService;
 	}
 
 	@Override
@@ -58,6 +62,8 @@ public class PasteWelcomeMessageCommand extends SlashCommand {
 		event.reply(":3")
 				.setEphemeral(true)
 				.queue();
+
+		discordLogService.debug(event);
 	}
 
 

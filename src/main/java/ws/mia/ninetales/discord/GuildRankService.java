@@ -26,13 +26,15 @@ public class GuildRankService {
 	private final EnvironmentService environmentService;
 	private final MongoUserService mongoUserService;
 	private final CachedHypixelAPI cachedHypixelAPI;
+	private final DiscordLogService discordLogService;
 
-	public GuildRankService(HypixelAPI hypixelAPI, JDA jda, EnvironmentService environmentService, MongoUserService mongoUserService, CachedHypixelAPI cachedHypixelAPI) {
+	public GuildRankService(HypixelAPI hypixelAPI, JDA jda, EnvironmentService environmentService, MongoUserService mongoUserService, CachedHypixelAPI cachedHypixelAPI, DiscordLogService discordLogService) {
 		this.hypixelAPI = hypixelAPI;
 		this.jda = jda;
 		this.environmentService = environmentService;
 		this.mongoUserService = mongoUserService;
 		this.cachedHypixelAPI = cachedHypixelAPI;
+		this.discordLogService = discordLogService;
 	}
 
 	@Scheduled(fixedRate = 1000 * 60 * 6L) // 6mins so we guarantee new users are cached (Hypixel API cache is 5mins)
@@ -117,9 +119,12 @@ public class GuildRankService {
 						}
 
 					});
+					discordLogService.debug("Synced Roles", "Performed successful role sync for " + members.size() + " discord members");
 				})
-				.onError((t) -> log.warn("Failed to retrieve members", t));
-
+				.onError((t) -> {
+					log.warn("Failed to retrieve members", t);
+					discordLogService.warn("Failed to sync (retrieve) members", t.getMessage());
+				});
 
 
 	}
