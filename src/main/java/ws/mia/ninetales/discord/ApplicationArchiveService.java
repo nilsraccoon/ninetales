@@ -1,20 +1,12 @@
 package ws.mia.ninetales.discord;
 
-import com.google.common.collect.Lists;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
-import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.Channel;
-import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.ForumChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.events.channel.ChannelDeleteEvent;
-import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
-import org.jetbrains.annotations.NotNull;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.EnvironmentService;
 import ws.mia.ninetales.mojang.MojangAPI;
@@ -45,30 +37,30 @@ public class ApplicationArchiveService {
 
 	public void archive(TextChannel applicationChannel) {
 		NinetalesUser ntUser = mongoUserService.getUserByApplicationChannelId(applicationChannel.getIdLong());
-		if(ntUser == null) {
+		if (ntUser == null) {
 			return;
 		}
 		ForumChannel forum = null;
 		String archContent = null;
-		if(ntUser.getGuildApplicationChannelId() != null) {
+		if (ntUser.getGuildApplicationChannelId() != null) {
 			String arch = environmentService.getGuildApplicationsArchiveForum();
-			if(arch == null) return;
+			if (arch == null) return;
 			forum = applicationChannel.getGuild().getForumChannelById(arch);
 			archContent = "Archive of <@" + ntUser.getDiscordId() + ">'s guild application";
 		}
-		if(ntUser.getDiscordApplicationChannelId() != null) {
+		if (ntUser.getDiscordApplicationChannelId() != null) {
 			String arch = environmentService.getDiscordApplicationsArchiveForum();
-			if(arch == null) return;
+			if (arch == null) return;
 			forum = applicationChannel.getGuild().getForumChannelById(arch);
 			archContent = "Archive of <@" + ntUser.getDiscordId() + ">'s discord application";
 		}
 
 		Member ntMember = applicationChannel.getGuild().retrieveMemberById(ntUser.getDiscordId()).complete();
 		System.out.println(ntMember);
-		if(forum == null) return;
+		if (forum == null) return;
 
 		String mcName = mojangAPI.getUsername(ntUser.getMinecraftUuid());
-		if(mcName == null) mcName = applicationChannel.getName();
+		if (mcName == null) mcName = applicationChannel.getName();
 
 		List<Message> messages = new ArrayList<>(applicationChannel.getHistory().retrievePast(100).complete());
 		Collections.reverse(messages);
@@ -77,6 +69,7 @@ public class ApplicationArchiveService {
 			List<MessageEmbed> embeds = new ArrayList<>();
 			messages.forEach(message -> {
 				Color c = message.getMember() != null ? message.getMember().getColor() : null;
+				if (ntMember != null) c = ntMember.getColor(); // more up-to-date
 				EmbedBuilder eb = new EmbedBuilder()
 						.setAuthor(message.getAuthor().getEffectiveName(), null, message.getAuthor().getAvatarUrl())
 						.setTimestamp(message.getTimeCreated())
@@ -91,7 +84,7 @@ public class ApplicationArchiveService {
 			for (int i = 0; i < embeds.size(); i += 10) {
 				partitions.add(embeds.subList(i, Math.min(i + 10, embeds.size())));
 			}
-			if(ntMember != null) {
+			if (ntMember != null) {
 				ntMember.getUser().openPrivateChannel().queue(pc -> {
 					String ap = ntUser.getDiscordApplicationChannelId() != null ? "discord" : "guild";
 					pc.sendMessage("Below is a transcript of your recent application to join the Ninetales %s:".formatted(ap)).queue();
@@ -105,7 +98,7 @@ public class ApplicationArchiveService {
 				archiveChannel.getThreadChannel().sendMessageEmbeds(m).queue();
 			});
 
-			discordLogService.debug("Application Archive", "Archived <@"+ntUser.getDiscordId() + ">'s application to " + archiveChannel.getThreadChannel().getJumpUrl());
+			discordLogService.debug("Application Archive", "Archived <@" + ntUser.getDiscordId() + ">'s application to " + archiveChannel.getThreadChannel().getJumpUrl());
 			archiveChannel.getThreadChannel().getManager().setLocked(true).queue();
 		});
 
