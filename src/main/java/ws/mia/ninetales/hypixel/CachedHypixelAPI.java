@@ -1,12 +1,14 @@
 package ws.mia.ninetales.hypixel;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.Nullable;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.EnvironmentService;
 
 import java.net.http.HttpClient;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,7 +20,7 @@ public class CachedHypixelAPI extends RemoteHypixelAPI {
 	private static final long CACHE_DURATION_MINUTES = 5;
 
 	private final Map<UUID, CachedDiscord> discordCache = new ConcurrentHashMap<>();
-	private CachedGuildRanks guildRanksCache;
+	private CachedGuildPlayers guildPlayerCache;
 
 	public CachedHypixelAPI(ObjectMapper objectMapper, HttpClient httpClient, EnvironmentService environmentService) {
 		super(objectMapper, httpClient, environmentService);
@@ -39,18 +41,19 @@ public class CachedHypixelAPI extends RemoteHypixelAPI {
 	}
 
 	@Override
-	public Map<UUID, HypixelGuildRank> getGuildRanks() {
-		if (guildRanksCache != null && !guildRanksCache.isExpired()) {
-			return guildRanksCache.ranks;
+	public Map<UUID, GuildPlayer> getGuildPlayers() {
+		if(guildPlayerCache != null && !guildPlayerCache.isExpired()) {
+			return guildPlayerCache.players;
 		}
 
-		Map<UUID, HypixelGuildRank> ranks = super.getGuildRanks();
-		if (ranks != null) {
-			guildRanksCache = new CachedGuildRanks(ranks, Instant.now());
+		Map<UUID, GuildPlayer> players = super.getGuildPlayers();
+		if(players != null) {
+			guildPlayerCache = new CachedGuildPlayers(players, Instant.now());
 		}
-		return ranks;
+		return players;
 	}
 
+	@Nullable
 	public String retrieveDiscord(UUID uuid) {
 		String discord = super.getDiscord(uuid);
 		if (discord != null) {
@@ -59,12 +62,13 @@ public class CachedHypixelAPI extends RemoteHypixelAPI {
 		return discord;
 	}
 
-	public Map<UUID, HypixelGuildRank> retrieveGuildRanks() {
-		Map<UUID, HypixelGuildRank> ranks = super.getGuildRanks();
-		if (ranks != null) {
-			guildRanksCache = new CachedGuildRanks(ranks, Instant.now());
+	@Nullable
+	public Map<UUID, GuildPlayer> retrieveGuildPlayers() {
+		Map<UUID, GuildPlayer> players = super.getGuildPlayers();
+		if(players != null) {
+			guildPlayerCache = new CachedGuildPlayers(players, Instant.now());
 		}
-		return ranks;
+		return players;
 	}
 
 	private static class CachedDiscord {
@@ -81,12 +85,12 @@ public class CachedHypixelAPI extends RemoteHypixelAPI {
 		}
 	}
 
-	private static class CachedGuildRanks {
-		final Map<UUID, HypixelGuildRank> ranks;
+	private static class CachedGuildPlayers {
+		final Map<UUID, GuildPlayer> players;
 		final Instant cachedAt;
 
-		CachedGuildRanks(Map<UUID, HypixelGuildRank> ranks, Instant cachedAt) {
-			this.ranks = ranks;
+		CachedGuildPlayers(Map<UUID, GuildPlayer> players, Instant cachedAt) {
+			this.players = players;
 			this.cachedAt = cachedAt;
 		}
 

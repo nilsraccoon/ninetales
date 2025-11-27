@@ -14,12 +14,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
-public class RemoteHypixelAPI implements HypixelAPI{
+public class RemoteHypixelAPI implements HypixelAPI {
 	private static final Logger log = LoggerFactory.getLogger(RemoteHypixelAPI.class);
 
 	private final ObjectMapper objectMapper;
@@ -60,7 +58,8 @@ public class RemoteHypixelAPI implements HypixelAPI{
 	}
 
 	@Override
-	public Map<UUID, HypixelGuildRank> getGuildRanks() {
+	@Nullable
+	public Map<UUID, GuildPlayer>  getGuildPlayers() {
 		try {
 			HttpRequest request = HttpRequest.newBuilder().uri(URI.create("https://api.hypixel.net/guild?key=%s&id=%s".formatted(environmentService.getHypixelAPIKey(), environmentService.getHypixelGuildId())))
 					.GET()
@@ -72,17 +71,18 @@ public class RemoteHypixelAPI implements HypixelAPI{
 				throw new IOException("http " + response.statusCode());
 			}
 
-			Map<UUID, HypixelGuildRank> rankMap = new HashMap<>();
+			Map<UUID, GuildPlayer> retMap = new HashMap<>();
 
 			JsonNode guildNode = objectMapper.readTree(response.body()).get("guild");
 			if (guildNode == null || guildNode.get("members") == null) {
-				return rankMap;
+				return null;
 			}
 
 			JsonNode membersNode = guildNode.get("members");
 			for (JsonNode memberNode : membersNode) {
 				String uuidStr = memberNode.get("uuid").asText();
 				String rankName = memberNode.get("rank").asText();
+				long joinTs = memberNode.get("joined").asLong();
 
 				long msb = Long.parseUnsignedLong(uuidStr.substring(0, 16), 16);
 				long lsb = Long.parseUnsignedLong(uuidStr.substring(16), 16);
@@ -91,18 +91,19 @@ public class RemoteHypixelAPI implements HypixelAPI{
 				HypixelGuildRank rank = HypixelGuildRank.fromHypixel(rankName);
 
 				if (rank != null) {
-					rankMap.put(uuid, rank);
+					retMap.put(uuid, new GuildPlayer(uuid, rank, joinTs));
 				}
 			}
 
-			return rankMap;
+			return retMap;
 		} catch (IOException  | NullPointerException e) {
-			log.warn("Unable to get guild ranks from Hypixel", e);
+			log.warn("Unable to get guild from Hypixel", e);
 			return null;
 		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
-			log.warn("Interrupted while attempting to get guild ranks from Hypixel", e);
+			log.warn("Interrupted while attempting to get guild from Hypixel", e);
 			return null;
 		}
 	}
+
 }

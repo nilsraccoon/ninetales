@@ -101,6 +101,14 @@ public class MongoUserService {
 		return userDoc.getLong("discordId");
 	}
 
+	public Boolean hasHadGuildJoinMessage(long discordId) {
+		Document userDoc = usersCollection.find(Filters.eq("discordId", discordId)).first();
+		if (userDoc == null) {
+			return null;
+		}
+		return userDoc.getBoolean("guildJoinMessage");
+	}
+
 	public boolean isUserLinked(long discordId) {
 		Document userDoc = usersCollection.find(Filters.eq("discordId", discordId)).first();
 		if (userDoc == null) {
@@ -170,6 +178,14 @@ public class MongoUserService {
 		);
 	}
 
+	public void setHasHadGuildJoinMessage(long discordId, boolean a) {
+		ensureUserExists(discordId);
+		usersCollection.updateOne(
+				Filters.eq("discordId", discordId),
+				Updates.set("guildJoinMessage", a)
+		);
+	}
+
 	private void ensureUserExists(long discordId) {
 		Document existing = usersCollection.find(Filters.eq("discordId", discordId)).first();
 		if (existing == null) {
@@ -201,6 +217,7 @@ public class MongoUserService {
 		ninetalesUser.setAwaitingHypixelInvite(doc.getBoolean("awaitingHypixelInvite", false));
 		ninetalesUser.setDiscordMember(doc.getBoolean("discordMember", false));
 
+		ninetalesUser.setHasHadGuildJoinMessage(doc.getBoolean("guildJoinMessage", false));
 		return ninetalesUser;
 	}
 

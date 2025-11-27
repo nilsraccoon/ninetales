@@ -12,6 +12,7 @@ import ws.mia.ninetales.EnvironmentService;
 import ws.mia.ninetales.hypixel.CachedHypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelGuildRank;
+import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
@@ -27,14 +28,20 @@ public class GuildRankService {
 	private final MongoUserService mongoUserService;
 	private final CachedHypixelAPI cachedHypixelAPI;
 	private final DiscordLogService discordLogService;
+	private final ApplicationService applicationService;
+	private final MojangAPI mojangAPI;
 
-	public GuildRankService(HypixelAPI hypixelAPI, JDA jda, EnvironmentService environmentService, MongoUserService mongoUserService, CachedHypixelAPI cachedHypixelAPI, DiscordLogService discordLogService) {
+	private Map<UUID, HypixelAPI.GuildPlayer> lastGuildPlayers = null;
+
+	public GuildRankService(HypixelAPI hypixelAPI, JDA jda, EnvironmentService environmentService, MongoUserService mongoUserService, CachedHypixelAPI cachedHypixelAPI, DiscordLogService discordLogService, ApplicationService applicationService, MojangAPI mojangAPI) {
 		this.hypixelAPI = hypixelAPI;
 		this.jda = jda;
 		this.environmentService = environmentService;
 		this.mongoUserService = mongoUserService;
 		this.cachedHypixelAPI = cachedHypixelAPI;
 		this.discordLogService = discordLogService;
+		this.applicationService = applicationService;
+		this.mojangAPI = mojangAPI;
 	}
 
 	@Scheduled(fixedRate = 1000 * 60 * 6L) // 6mins so we guarantee new users are cached (Hypixel API cache is 5mins)
@@ -47,8 +54,8 @@ public class GuildRankService {
 
 		Guild guild = jda.getGuildById(environmentService.getDiscordGuildId());
 
-		Map<UUID, HypixelGuildRank> ranks = (!retrieve) ? cachedHypixelAPI.getGuildRanks() : cachedHypixelAPI.retrieveGuildRanks();
-		if (ranks == null) return;
+		Map<UUID, HypixelAPI.GuildPlayer> players = (!retrieve) ? cachedHypixelAPI.getGuildPlayers() : cachedHypixelAPI.retrieveGuildPlayers();
+		if (players == null) return;
 
 		List<NinetalesUser> allNtUsers = mongoUserService.getAllUsers();
 
@@ -78,7 +85,7 @@ public class GuildRankService {
 							return;
 						}
 
-						HypixelGuildRank rank = ranks.get(ntUser.getMinecraftUuid());
+						HypixelGuildRank rank = players.containsKey(ntUser.getMinecraftUuid()) ? players.get(ntUser.getMinecraftUuid()).getRank() : null;
 
 						if (rank == null) { // not in the guild
 							List<Role> rolesToAdd = new ArrayList<>();
@@ -90,8 +97,14 @@ public class GuildRankService {
 							return;
 						}
 
-						// is a guild member
-						//todo check if they joined within like 20m. if they did, send a welcome msg
+						// is a guild member //
+
+						// check if they joined recently; send a join message if they did (and one hasn't been sent already)
+						// check 2 ways to be sure
+						if (lastGuildPlayers != null && !lastGuildPlayers.containsKey(ntUser.getMinecraftUuid()) && !ntUser.hasHadGuildJoinMessage()) {
+							applicationService.sendJoinGuildMessage(guild, ntUser.getDiscordId());
+						}
+
 						List<Role> rolesToRemove = allGuildRoles;
 						rolesToRemove.removeIf(r -> r.getId().equals(rank.getDiscordRoleId()));
 						rolesToRemove.add(visitorRole);
@@ -119,12 +132,12 @@ public class GuildRankService {
 						}
 
 					});
+					this.lastGuildPlayers = players;
 				})
 				.onError((t) -> {
 					log.warn("Failed to retrieve members", t);
 					discordLogService.warn("Failed to sync (retrieve) members", t.getMessage());
 				});
-
 
 	}
 
@@ -134,7 +147,11 @@ public class GuildRankService {
 		if (user == null) {
 			throw new RuntimeException(user.toString());
 		}
-		HypixelGuildRank rank = hypixelAPI.getGuildRanks().get(user.getMinecraftUuid());
+
+		Map<UUID, HypixelAPI.GuildPlayer> players = hypixelAPI.getGuildPlayers();
+		if (players == null) return; // fail
+
+		HypixelGuildRank rank = players.get(user.getMinecraftUuid()).getRank();
 		if (rank == null) {
 			mongoUserService.setDiscordMember(user.getDiscordId(), false);
 			return;

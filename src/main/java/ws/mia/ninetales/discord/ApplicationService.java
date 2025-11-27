@@ -109,7 +109,7 @@ public class ApplicationService {
 								mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), tailTc.getIdLong());
 								tailTc.sendMessage("Use this channel to discuss the visitor application in <#%s>".formatted(tc.getIdLong())).queue();
 
-								discordLogService.info("Created Discord application channel", "For <@%s> (%s)\nUser channel: <#%s>\nTail Channel: <#%s>"
+								discordLogService.info("Created Discord application channel", "For <@%s> `(%s)`\nUser channel: <#%s>\nTail Channel: <#%s>"
 										.formatted(ntUser.getDiscordId(), finalMcUsername, tc.getId(), tailTc.getId()));
 							});
 				});
@@ -126,7 +126,9 @@ public class ApplicationService {
 		}
 
 		NinetalesUser ntUser = mongoUserService.getUser(user.getIdLong());
-		if (hypixelAPI.getGuildRanks().containsKey(ntUser.getMinecraftUuid())) {
+		Map<UUID, HypixelAPI.GuildPlayer> gPlayers = hypixelAPI.getGuildPlayers();
+
+		if (gPlayers != null && gPlayers.containsKey(ntUser.getMinecraftUuid())) {
 			guildMemberFailure.accept(ntUser);
 			return false;
 		}
@@ -248,6 +250,7 @@ public class ApplicationService {
 			throw new RuntimeException("uhh " + ntUser);
 		}
 
+		event.deferReply(true).queue();
 		applicationArchiveService.archive(event.getChannel().asTextChannel());
 
 		event.getChannel().asTextChannel().delete().queue();
@@ -314,8 +317,8 @@ public class ApplicationService {
 		guild.retrieveMemberById(ntApplicant.getDiscordId()).queue(member -> {
 			member.getUser().openPrivateChannel().queue(p -> {
 
-				UUID gmUuid = hypixelAPI.getGuildRanks().entrySet().stream().filter(entry -> {
-					return entry.getValue().equals(HypixelGuildRank.GUILD_MASTER);
+				UUID gmUuid = hypixelAPI.getGuildPlayers().entrySet().stream().filter(entry -> {
+					return entry.getValue().getRank().equals(HypixelGuildRank.GUILD_MASTER);
 				}).map(Map.Entry::getKey).findAny().orElse(null);
 
 				String gmUsername = gmUuid == null ? "lynyy" : mojangAPI.getUsername(gmUuid);
@@ -403,10 +406,15 @@ public class ApplicationService {
 	}
 
 	public void sendJoinGuildMessage(Guild guild, Long discordId) {
+		NinetalesUser ntUser = mongoUserService.getUser(discordId);
+		if(ntUser == null) return;
+		if(ntUser.hasHadGuildJoinMessage()) return;
+
 		if (environmentService.getGuildJoinMessageChannelId() != null) {
 			guild.getTextChannelById(environmentService.getGuildJoinMessageChannelId())
 					.sendMessage("<@%s> has joined the guild!".formatted(discordId))
 					.queue();
+			mongoUserService.setHasHadGuildJoinMessage(discordId, true);
 		}
 	}
 

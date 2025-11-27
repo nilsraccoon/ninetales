@@ -12,6 +12,7 @@ public class NinetalesUser {
 	private boolean awaitingHypixelInvite;
 	private Long questionChannelId;
 	private boolean discordMember;
+	private boolean guildJoinMessage;
 
 	public NinetalesUser() {
 	}
@@ -69,6 +70,14 @@ public class NinetalesUser {
 		this.discordMember = b;
 	}
 
+	protected void setHasHadGuildJoinMessage(boolean b) {
+		this.guildJoinMessage = b;
+	}
+
+	public boolean hasHadGuildJoinMessage() {
+		return guildJoinMessage;
+	}
+
 	protected void setQuestionChannelId(Long questionChannelId) {
 		this.questionChannelId = questionChannelId;
 	}
@@ -100,6 +109,7 @@ public class NinetalesUser {
 				", awaitingHypixelInvite=" + awaitingHypixelInvite +
 				", questionChannelId=" + questionChannelId +
 				", discordMember=" + discordMember +
+				", guildJoinMessage=" + guildJoinMessage +
 				'}';
 	}
 
@@ -114,6 +124,7 @@ public class NinetalesUser {
 		  "questionChannelId": %s,
 		  "awaitingHypixelInvite": %b,
 		  "discordMember": %b
+		  "guildJoinMessage": %b
 		}""".formatted(
 				discordId,
 				minecraftUuid != null ? "\"" + minecraftUuid + "\"" : "null",
@@ -122,7 +133,8 @@ public class NinetalesUser {
 				tailDiscussionChannelId != null ? tailDiscussionChannelId : "null",
 				questionChannelId != null ? questionChannelId : "null",
 				awaitingHypixelInvite,
-				discordMember
+				discordMember,
+				guildJoinMessage
 		);
 	}
 }

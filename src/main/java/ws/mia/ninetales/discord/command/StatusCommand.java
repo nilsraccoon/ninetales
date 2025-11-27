@@ -18,6 +18,8 @@ import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 
 @Component
@@ -74,10 +76,11 @@ public class StatusCommand extends SlashCommand {
 
 		StringBuilder response = new StringBuilder("<@%s> is linked as `".formatted(user.getId()) + linkedMinecraftName + "`");
 
-		HypixelGuildRank rank = hypixelAPI.getGuildRanks().get(ntUser.getMinecraftUuid());
+		HypixelAPI.GuildPlayer player = Objects.requireNonNull(hypixelAPI.getGuildPlayers()).get(ntUser.getMinecraftUuid());
 
-		if(rank != null) {
-			response.append("\nThey are in the Ninetales Hypixel guild, with rank: **").append(rank.getHypixelRankName()).append("**");
+		if(player != null) {
+			response.append("\nThey are in the Ninetales Hypixel guild, with rank: **").append(player.getRank().getHypixelRankName()).append("**")
+					.append(" (joined ").append(Math.round(Duration.ofMillis(Instant.now().toEpochMilli() - player.getJoinTimestamp()).toDays())).append(" days ago)");
 		} else {
 			response.append("\nThey are **not** in the Ninetales Hypixel guild.");
 		}
@@ -93,7 +96,7 @@ public class StatusCommand extends SlashCommand {
 			response.append("\nDiscord application channel: <#").append(ntUser.getDiscordApplicationChannelId()).append(">");
 		}
 
-		if(!appChannel && rank == null) {
+		if(!appChannel && player == null) {
 			response.append("\nThey do not have an open application.");
 		}
 
