@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,10 +31,11 @@ public class GuildRankService {
 	private final DiscordLogService discordLogService;
 	private final ApplicationService applicationService;
 	private final MojangAPI mojangAPI;
+	private final ApplicationArchiveService applicationArchiveService;
 
 	private Map<UUID, HypixelAPI.GuildPlayer> lastGuildPlayers = null;
 
-	public GuildRankService(HypixelAPI hypixelAPI, JDA jda, EnvironmentService environmentService, MongoUserService mongoUserService, CachedHypixelAPI cachedHypixelAPI, DiscordLogService discordLogService, ApplicationService applicationService, MojangAPI mojangAPI) {
+	public GuildRankService(HypixelAPI hypixelAPI, JDA jda, EnvironmentService environmentService, MongoUserService mongoUserService, CachedHypixelAPI cachedHypixelAPI, DiscordLogService discordLogService, ApplicationService applicationService, MojangAPI mojangAPI, ApplicationArchiveService applicationArchiveService) {
 		this.hypixelAPI = hypixelAPI;
 		this.jda = jda;
 		this.environmentService = environmentService;
@@ -42,6 +44,7 @@ public class GuildRankService {
 		this.discordLogService = discordLogService;
 		this.applicationService = applicationService;
 		this.mojangAPI = mojangAPI;
+		this.applicationArchiveService = applicationArchiveService;
 	}
 
 	@Scheduled(fixedRate = 1000 * 60 * 6L) // 6mins so we guarantee new users are cached (Hypixel API cache is 5mins)
@@ -122,7 +125,9 @@ public class GuildRankService {
 						}
 
 						if (ntUser.getGuildApplicationChannelId() != null) {
-							guild.getTextChannelById(ntUser.getGuildApplicationChannelId()).delete().queue();
+							TextChannel tc = guild.getTextChannelById(ntUser.getGuildApplicationChannelId());
+							applicationArchiveService.archive(tc);
+							tc.delete().queue();
 							mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
 						}
 
