@@ -126,9 +126,10 @@ public class GuildRankService {
 
 						if (ntUser.getGuildApplicationChannelId() != null) {
 							TextChannel tc = guild.getTextChannelById(ntUser.getGuildApplicationChannelId());
-							applicationArchiveService.archive(tc);
-							tc.delete().queue();
-							mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
+							applicationArchiveService.archive(tc, () -> {
+								tc.delete().queue();
+								mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
+							});
 						}
 
 						if (ntUser.getTailDiscussionChannelId() != null) {

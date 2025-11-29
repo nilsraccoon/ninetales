@@ -17,25 +17,31 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 @Service
 public class ApplicationArchiveService {
 
-	private final ApplicationService applicationService;
 	private final MongoUserService mongoUserService;
 	private final EnvironmentService environmentService;
 	private final DiscordLogService discordLogService;
 	private final MojangAPI mojangAPI;
 
-	public ApplicationArchiveService(ApplicationService applicationService, MongoUserService mongoUserService, EnvironmentService environmentService, DiscordLogService discordLogService, MojangAPI mojangAPI) {
-		this.applicationService = applicationService;
+	public ApplicationArchiveService(MongoUserService mongoUserService, EnvironmentService environmentService, DiscordLogService discordLogService, MojangAPI mojangAPI) {
 		this.mongoUserService = mongoUserService;
 		this.environmentService = environmentService;
 		this.discordLogService = discordLogService;
 		this.mojangAPI = mojangAPI;
 	}
 
-	public void archive(TextChannel applicationChannel) {
+	/**
+	 * @param callback guarantee running after archival
+	 */
+	public void archive(TextChannel applicationChannel, Runnable callback) {
+		// Note: using complete()'s would make this way more pretty and eliminate the need for a callback. However, thank JDA for making that throw an error inside of
+		// calling callbacks because of some edge-cases -.-
+		if(applicationChannel == null) return;
+
 		NinetalesUser ntUser = mongoUserService.getUserByApplicationChannelId(applicationChannel.getIdLong());
 		if (ntUser == null) {
 			return;
@@ -55,53 +61,60 @@ public class ApplicationArchiveService {
 			archContent = "Archive of <@" + ntUser.getDiscordId() + ">'s discord application";
 		}
 
-		Member ntMember = applicationChannel.getGuild().retrieveMemberById(ntUser.getDiscordId()).complete();
-		System.out.println(ntMember);
-		if (forum == null) return;
+		String finalArchContent = archContent;
+		ForumChannel finalForum = forum;
+		applicationChannel.getGuild().retrieveMemberById(ntUser.getDiscordId()).queue(ntMember -> {
+			if (finalForum == null) return;
 
-		String mcName = mojangAPI.getUsername(ntUser.getMinecraftUuid());
-		if (mcName == null) mcName = applicationChannel.getName();
+			String mcName = mojangAPI.getUsername(ntUser.getMinecraftUuid());
+			if (mcName == null) mcName = applicationChannel.getName();
 
-		List<Message> messages = new ArrayList<>(applicationChannel.getHistory().retrievePast(100).complete());
-		Collections.reverse(messages);
+			String finalMcName = mcName;
+			applicationChannel.getHistory().retrievePast(100).queue(ml -> {
+				List<Message> messages = new ArrayList<>(ml);
+				Collections.reverse(messages);
 
-		forum.createForumPost(mcName, MessageCreateData.fromContent(archContent)).queue(archiveChannel -> {
-			List<MessageEmbed> embeds = new ArrayList<>();
-			messages.forEach(message -> {
-				Color c = message.getMember() != null ? message.getMember().getColor() : null;
-				if(message.getMember() != null) {
-					if (ntMember != null && ntMember.getId().equals(message.getMember().getId())) c = ntMember.getColor(); // more up-to-date
-				}
-				EmbedBuilder eb = new EmbedBuilder()
-						.setAuthor(message.getAuthor().getEffectiveName(), null, message.getAuthor().getAvatarUrl())
-						.setTimestamp(message.getTimeCreated())
-						.setDescription(message.getContentDisplay())
-						.setColor(c);
-				embeds.add(eb.build());
+				finalForum.createForumPost(finalMcName, MessageCreateData.fromContent(finalArchContent)).queue(archiveChannel -> {
+					List<MessageEmbed> embeds = new ArrayList<>();
+					messages.forEach(message -> {
+						Color c = message.getMember() != null ? message.getMember().getColor() : null;
+						if(message.getMember() != null) {
+							if (ntMember != null && ntMember.getId().equals(message.getMember().getId())) c = ntMember.getColor(); // more up-to-date
+						}
+						EmbedBuilder eb = new EmbedBuilder()
+								.setAuthor(message.getAuthor().getEffectiveName(), null, message.getAuthor().getAvatarUrl())
+								.setTimestamp(message.getTimeCreated())
+								.setDescription(message.getContentDisplay())
+								.setColor(c);
+						embeds.add(eb.build());
 
-			});
-
-			// we can send up to 10 embeds at a time, so group.
-			List<List<MessageEmbed>> partitions = new ArrayList<>();
-			for (int i = 0; i < embeds.size(); i += 10) {
-				partitions.add(embeds.subList(i, Math.min(i + 10, embeds.size())));
-			}
-			if (ntMember != null) {
-				ntMember.getUser().openPrivateChannel().queue(pc -> {
-					String ap = ntUser.getDiscordApplicationChannelId() != null ? "discord" : "guild";
-					pc.sendMessage("Below is a transcript of your recent application to join the Ninetales %s:".formatted(ap)).queue();
-					partitions.forEach(m -> {
-						pc.sendMessageEmbeds(m).queue();
 					});
+
+					// we can send up to 10 embeds at a time, so group.
+					List<List<MessageEmbed>> partitions = new ArrayList<>();
+					for (int i = 0; i < embeds.size(); i += 10) {
+						partitions.add(embeds.subList(i, Math.min(i + 10, embeds.size())));
+					}
+					if (ntMember != null) {
+						ntMember.getUser().openPrivateChannel().queue(pc -> {
+							String ap = ntUser.getDiscordApplicationChannelId() != null ? "discord" : "guild";
+							pc.sendMessage("Below is a transcript of your recent application to join the Ninetales %s:".formatted(ap)).queue();
+							partitions.forEach(m -> {
+								pc.sendMessageEmbeds(m).queue();
+							});
+						});
+					}
+
+					partitions.forEach(m -> {
+						archiveChannel.getThreadChannel().sendMessageEmbeds(m).queue();
+					});
+
+					discordLogService.debug("Application Archive", "Archived <@" + ntUser.getDiscordId() + ">'s application to " + archiveChannel.getThreadChannel().getJumpUrl());
+					archiveChannel.getThreadChannel().getManager().setLocked(true).queue();
+
+					callback.run();
 				});
-			}
-
-			partitions.forEach(m -> {
-				archiveChannel.getThreadChannel().sendMessageEmbeds(m).queue();
 			});
-
-			discordLogService.debug("Application Archive", "Archived <@" + ntUser.getDiscordId() + ">'s application to " + archiveChannel.getThreadChannel().getJumpUrl());
-			archiveChannel.getThreadChannel().getManager().setLocked(true).queue();
 		});
 
 	}

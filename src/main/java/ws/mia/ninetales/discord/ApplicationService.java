@@ -251,37 +251,37 @@ public class ApplicationService {
 		}
 
 		event.deferReply(true).queue();
-		applicationArchiveService.archive(event.getChannel().asTextChannel());
+		applicationArchiveService.archive(event.getChannel().asTextChannel(), () -> {
+			event.getChannel().asTextChannel().delete().queue();
 
-		event.getChannel().asTextChannel().delete().queue();
+			if (ntUser.isAwaitingHypixelInvite()) {
+				sendJoinGuildMessage(event.getGuild(), ntUser.getDiscordId());
+
+				event.getGuild().modifyMemberRoles(event.getGuild().retrieveMemberById(ntUser.getDiscordId()).complete(),
+								List.of(event.getGuild().getRoleById(environmentService.getEggRoleId()), event.getGuild().getRoleById(environmentService.getGuildMemberRoleId())),
+								List.of(event.getGuild().getRoleById(environmentService.getVisitorRoleId())))
+						.queue();
+
+			}
+
+			if (ntUser.getGuildApplicationChannelId() != null) {
+				String a = ntUser.isAwaitingHypixelInvite() ? "Finalised" : "Denied";
+				discordLogService.info(event, "%s Hypixel application for <@%s> `(%s)`".formatted(a, ntUser.getDiscordId(), mojangAPI.getUsername(ntUser.getMinecraftUuid())));
+				mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
+			}
+
+			if (ntUser.getDiscordApplicationChannelId() != null) {
+				discordLogService.info(event, "Denied Discord application for <@%s> `(%s)`".formatted(ntUser.getDiscordId(), mojangAPI.getUsername(ntUser.getMinecraftUuid())));
+				mongoUserService.setDiscordApplicationChannelId(ntUser.getDiscordId(), null);
+			}
+
+			mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), false);
+		});
 
 		if (ntUser.getTailDiscussionChannelId() != null) {
 			mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), null);
 			event.getGuild().getTextChannelById(ntUser.getTailDiscussionChannelId()).delete().queue();
 		}
-
-		if (ntUser.isAwaitingHypixelInvite()) {
-			sendJoinGuildMessage(event.getGuild(), ntUser.getDiscordId());
-
-			event.getGuild().modifyMemberRoles(event.getGuild().retrieveMemberById(ntUser.getDiscordId()).complete(),
-							List.of(event.getGuild().getRoleById(environmentService.getEggRoleId()), event.getGuild().getRoleById(environmentService.getGuildMemberRoleId())),
-							List.of(event.getGuild().getRoleById(environmentService.getVisitorRoleId())))
-					.queue();
-
-		}
-
-		if (ntUser.getGuildApplicationChannelId() != null) {
-			String a = ntUser.isAwaitingHypixelInvite() ? "Finalised" : "Denied";
-			discordLogService.info(event, "%s Hypixel application for <@%s> `(%s)`".formatted(a, ntUser.getDiscordId(), mojangAPI.getUsername(ntUser.getMinecraftUuid())));
-			mongoUserService.setGuildApplicationChannelId(ntUser.getDiscordId(), null);
-		}
-
-		if (ntUser.getDiscordApplicationChannelId() != null) {
-			discordLogService.info(event, "Denied Discord application for <@%s> `(%s)`".formatted(ntUser.getDiscordId(), mojangAPI.getUsername(ntUser.getMinecraftUuid())));
-			mongoUserService.setDiscordApplicationChannelId(ntUser.getDiscordId(), null);
-		}
-
-		mongoUserService.setAwaitingHypixelInvite(ntUser.getDiscordId(), false);
 	}
 
 	private void acceptDiscordApplication(NinetalesUser ntApplicant, Guild guild, Optional<String> message) {
@@ -294,19 +294,21 @@ public class ApplicationService {
 
 				message.ifPresent(msg -> p.sendMessage("A message from our tails: " + msg).queue());
 
-				mongoUserService.setDiscordApplicationChannelId(ntApplicant.getDiscordId(), null);
-				mongoUserService.setDiscordMember(ntApplicant.getDiscordId(), true);
-
 				// give visitor role
 				guild.addRoleToMember(member, guild.getRoleById(environmentService.getVisitorRoleId())).queue();
 
-				// delete channels
-				guild.getTextChannelById(ntApplicant.getDiscordApplicationChannelId()).delete().queue();
-				if (ntApplicant.getTailDiscussionChannelId() != null) {
-					mongoUserService.setTailDiscussionChannelId(ntApplicant.getDiscordId(), null);
-					guild.getTextChannelById(ntApplicant.getTailDiscussionChannelId()).delete().queue();
-				}
+				// archive channel
+				applicationArchiveService.archive(guild.getTextChannelById(ntApplicant.getDiscordApplicationChannelId()), () -> {
+					// delete channels
+					guild.getTextChannelById(ntApplicant.getDiscordApplicationChannelId()).delete().queue();
+					if (ntApplicant.getTailDiscussionChannelId() != null) {
+						mongoUserService.setTailDiscussionChannelId(ntApplicant.getDiscordId(), null);
+						guild.getTextChannelById(ntApplicant.getTailDiscussionChannelId()).delete().queue();
+					}
 
+					mongoUserService.setDiscordApplicationChannelId(ntApplicant.getDiscordId(), null);
+					mongoUserService.setDiscordMember(ntApplicant.getDiscordId(), true);
+				});
 			}, (t) -> {
 				throw new RuntimeException(t);
 			});
@@ -339,7 +341,7 @@ public class ApplicationService {
 					tailChannel.sendMessage("The guild application has been accepted by <@" + caller.getId() + ">. Waiting for a Hypixel invite before finalising application.").queue();
 				}
 
-				// do role stuff and global message stuff in #closeAcceptedGuildApplication
+				// do role stuff and global message stuff in #closeApplication which is called after this
 			}, (t) -> {
 				throw new RuntimeException(t);
 			});
