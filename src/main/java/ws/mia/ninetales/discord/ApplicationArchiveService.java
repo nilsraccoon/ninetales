@@ -1,12 +1,12 @@
 package ws.mia.ninetales.discord;
 
 import net.dv8tion.jda.api.EmbedBuilder;
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.ForumChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.EnvironmentService;
 import ws.mia.ninetales.mojang.MojangAPI;
@@ -17,7 +17,6 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
 
 @Service
 public class ApplicationArchiveService {
@@ -37,7 +36,7 @@ public class ApplicationArchiveService {
 	/**
 	 * @param callback guarantee running after archival
 	 */
-	public void archive(TextChannel applicationChannel, Runnable callback) {
+	public void archiveApplication(TextChannel applicationChannel, Runnable callback) {
 		// Note: using complete()'s would make this way more pretty and eliminate the need for a callback. However, thank JDA for making that throw an error inside of
 		// calling callbacks because of some edge-cases -.-
 		if(applicationChannel == null) return;
@@ -48,33 +47,37 @@ public class ApplicationArchiveService {
 		}
 		ForumChannel forum = null;
 		String archContent = null;
+		String nPrefix = "";
 		if (ntUser.getGuildApplicationChannelId() != null) {
 			String arch = environmentService.getGuildApplicationsArchiveForum();
 			if (arch == null) return;
 			forum = applicationChannel.getGuild().getForumChannelById(arch);
 			archContent = "Archive of <@" + ntUser.getDiscordId() + ">'s guild application";
+			nPrefix = ntUser.isAwaitingHypixelInvite() ? "Accepted - " : "Denied - ";
 		}
 		if (ntUser.getDiscordApplicationChannelId() != null) {
 			String arch = environmentService.getDiscordApplicationsArchiveForum();
 			if (arch == null) return;
 			forum = applicationChannel.getGuild().getForumChannelById(arch);
 			archContent = "Archive of <@" + ntUser.getDiscordId() + ">'s discord application";
+			nPrefix = ntUser.isDiscordMember() ? "Accepted - " : "Denied - ";
 		}
 
-		String finalArchContent = archContent;
-		ForumChannel finalForum = forum;
+		final String finalArchContent = archContent;
+		final ForumChannel finalForum = forum;
+		final String finalNPrefix = nPrefix;
 		applicationChannel.getGuild().retrieveMemberById(ntUser.getDiscordId()).queue(ntMember -> {
 			if (finalForum == null) return;
 
 			String mcName = mojangAPI.getUsername(ntUser.getMinecraftUuid());
 			if (mcName == null) mcName = applicationChannel.getName();
 
-			String finalMcName = mcName;
+			final String finalChName = finalNPrefix + mcName;
 			applicationChannel.getHistory().retrievePast(100).queue(ml -> {
 				List<Message> messages = new ArrayList<>(ml);
 				Collections.reverse(messages);
 
-				finalForum.createForumPost(finalMcName, MessageCreateData.fromContent(finalArchContent)).queue(archiveChannel -> {
+				finalForum.createForumPost(finalChName, MessageCreateData.fromContent(finalArchContent)).queue(archiveChannel -> {
 					List<MessageEmbed> embeds = new ArrayList<>();
 					messages.forEach(message -> {
 						Color c = message.getMember() != null ? message.getMember().getColor() : null;

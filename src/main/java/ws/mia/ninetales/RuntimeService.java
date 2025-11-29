@@ -2,23 +2,33 @@ package ws.mia.ninetales;
 
 import jakarta.annotation.PostConstruct;
 import org.jetbrains.annotations.Nullable;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.poseidon.api.PoseidonClient;
 import ws.mia.poseidon.api.PoseidonHttpClient;
 import ws.mia.poseidon.api.model.PoseidonContainer;
 
+import java.util.List;
+
 @Service
 public class RuntimeService {
 
 	private final DiscordLogService discordLogService;
+	private final Environment environment;
 
-	public RuntimeService(DiscordLogService discordLogService) {
+	public RuntimeService(DiscordLogService discordLogService, Environment environment) {
 		this.discordLogService = discordLogService;
+		this.environment = environment;
 	}
 
 	@PostConstruct
 	private void init() {
+		if(List.of(environment.getActiveProfiles()).contains("dev")) {
+			discordLogService.warn("Started **(Dev)**", "The bot is now **up**");
+			return;
+		}
+
 		PoseidonClient poseidonClient = new PoseidonHttpClient("https://poseidon.mia.ws");
 
 		StringBuilder msg = new StringBuilder("The bot is now **up**");

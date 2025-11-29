@@ -1,17 +1,12 @@
 package ws.mia.ninetales.discord;
 
-import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.User;
-import net.dv8tion.jda.api.entities.channel.concrete.ForumChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.entities.channel.forums.ForumPost;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.requests.restaction.ChannelAction;
-import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import org.jspecify.annotations.Nullable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -22,7 +17,6 @@ import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
-import java.awt.*;
 import java.util.*;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -251,7 +245,8 @@ public class ApplicationService {
 		}
 
 		event.deferReply(true).queue();
-		applicationArchiveService.archive(event.getChannel().asTextChannel(), () -> {
+
+		applicationArchiveService.archiveApplication(event.getChannel().asTextChannel(), () -> {
 			event.getChannel().asTextChannel().delete().queue();
 
 			if (ntUser.isAwaitingHypixelInvite()) {
@@ -298,7 +293,8 @@ public class ApplicationService {
 				guild.addRoleToMember(member, guild.getRoleById(environmentService.getVisitorRoleId())).queue();
 
 				// archive channel
-				applicationArchiveService.archive(guild.getTextChannelById(ntApplicant.getDiscordApplicationChannelId()), () -> {
+				mongoUserService.setDiscordMember(ntApplicant.getDiscordId(), true);
+				applicationArchiveService.archiveApplication(guild.getTextChannelById(ntApplicant.getDiscordApplicationChannelId()), () -> {
 					// delete channels
 					guild.getTextChannelById(ntApplicant.getDiscordApplicationChannelId()).delete().queue();
 					if (ntApplicant.getTailDiscussionChannelId() != null) {
@@ -307,7 +303,6 @@ public class ApplicationService {
 					}
 
 					mongoUserService.setDiscordApplicationChannelId(ntApplicant.getDiscordId(), null);
-					mongoUserService.setDiscordMember(ntApplicant.getDiscordId(), true);
 				});
 			}, (t) -> {
 				throw new RuntimeException(t);
