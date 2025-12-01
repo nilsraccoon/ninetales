@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import org.springframework.boot.logging.LogLevel;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import ws.mia.ninetales.mongo.MongoUserService;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 @Component
 public class NtSayCommand extends SlashCommand {
@@ -37,6 +39,7 @@ public class NtSayCommand extends SlashCommand {
 	public CommandData getCommand() {
 		return Commands.slash(COMMAND, ":3")
 				.addOption(OptionType.STRING, "message", "message", true)
+				.addOption(OptionType.STRING, "reply", "message ID of msg to reply to (same channel) ", false)
 				.setDefaultPermissions(DefaultMemberPermissions.enabledFor(Permission.VIEW_AUDIT_LOGS));
 	}
 
@@ -47,10 +50,10 @@ public class NtSayCommand extends SlashCommand {
 			return;
 		}
 
-		OptionMapping opt = event.getOption("message");
-		if (opt == null) return;
+		OptionMapping msgOpt = event.getOption("message");
+		if (msgOpt == null) return;
 
-		String msg = opt.getAsString();
+		String msg = msgOpt.getAsString();
 
 		if (mongoUserService.getUserByApplicationChannelId(event.getChannelIdLong()) != null) {
 			// We use bot messages as a counter, this would screw that up
@@ -60,9 +63,21 @@ public class NtSayCommand extends SlashCommand {
 
 		event.deferReply(true).queue(hook -> hook.deleteOriginal().queue());
 
-		event.getChannel().asTextChannel().sendMessage(msg)
-				.setAllowedMentions(List.of(Message.MentionType.ROLE, Message.MentionType.USER, Message.MentionType.CHANNEL, Message.MentionType.HERE))
+		OptionMapping replyOpt = event.getOption("reply");
+
+		Consumer<MessageCreateAction> finalize = (mc) -> {
+		mc.setAllowedMentions(List.of(Message.MentionType.ROLE, Message.MentionType.USER, Message.MentionType.CHANNEL, Message.MentionType.HERE))
 				.queue(m -> discordLogService.debug(event, m));
+		};
+
+		if(replyOpt != null) {
+			event.getChannel().asTextChannel().retrieveMessageById(replyOpt.getAsString()).queue((s) -> {
+				finalize.accept(s.reply(msg));
+			}, (t) -> { /* :( */ });
+			return;
+		}
+
+		finalize.accept(event.getChannel().asTextChannel().sendMessage(msg));
 
 
 	}
