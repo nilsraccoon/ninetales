@@ -51,6 +51,7 @@ A Spring application for the Discord bot managing **Ninetales** community member
 
 ### Tail Commands
 - `/nt-say <message>` - Send a message as the bot
+- `/nt-react <message> <reaction>` - Send a reaction as the bot
 - `/accept-app <message>` - Accept an application with an optional message
 - `/close-app` - Close an application once the user has joined the guild, or been denied
 - `/close-question` - Close a question channel

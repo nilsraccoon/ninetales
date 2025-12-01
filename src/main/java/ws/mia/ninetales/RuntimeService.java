@@ -51,7 +51,7 @@ public class RuntimeService {
 
 			@Nullable String updateNote = ninetalesContainer.getLabels().get("ninetales.update-note");
 			if (updateNote != null) {
-				msg.append("\n\n").append(updateNote);
+				msg.append("\n\n`").append(updateNote).append("`");
 			}
 
 			@Nullable String ninetalesVersion = ninetalesContainer.getLabels().get("arachne.version");

@@ -20,6 +20,7 @@ import ws.mia.ninetales.mongo.NinetalesUser;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 
 @Component
@@ -48,11 +49,12 @@ public class StatusCommand extends SlashCommand {
 	}
 
 	@Override
+	public List<String> roles() {
+		return List.of(environmentService.getTailRoleId());
+	}
+
+	@Override
 	public void onCommand(SlashCommandInteractionEvent event) {
-		if (Objects.requireNonNull(event.getMember()).getUnsortedRoles().stream().noneMatch(r -> r.getId().equals(environmentService.getTailRoleId()))) {
-			event.reply("Hey! You can't do that! :p").setEphemeral(true).queue();
-			return;
-		}
 
 		OptionMapping opt = event.getOption("user");
 		if(opt == null) {

@@ -15,6 +15,8 @@ import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
+import java.util.List;
+
 @Component
 public class MakeVisitorCommand extends SlashCommand {
 	private static final String COMMAND = "make-visitor";
@@ -40,12 +42,12 @@ public class MakeVisitorCommand extends SlashCommand {
 	}
 
 	@Override
-	public void onCommand(SlashCommandInteractionEvent event) {
-		if(!event.getMember().getUnsortedRoles().contains(event.getGuild().getRoleById(environmentService.getTailRoleId()))) {
-			event.reply("you can't do that!").setEphemeral(true).queue();
-			return;
-		}
+	public List<String> roles() {
+		return List.of(environmentService.getTailRoleId());
+	}
 
+	@Override
+	public void onCommand(SlashCommandInteractionEvent event) {
 		OptionMapping idOpt = event.getOption("user");
 		if(idOpt == null) {
 			event.reply("who?").setEphemeral(true).queue();

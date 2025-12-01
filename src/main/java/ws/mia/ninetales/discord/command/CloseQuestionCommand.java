@@ -12,6 +12,7 @@ import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 
+import java.util.List;
 import java.util.Objects;
 
 @Component
@@ -35,11 +36,12 @@ public class CloseQuestionCommand extends SlashCommand{
 	}
 
 	@Override
+	public List<String> roles() {
+		return List.of(environmentService.getTailRoleId());
+	}
+
+	@Override
 	public void onCommand(SlashCommandInteractionEvent event) {
-		if(Objects.requireNonNull(event.getMember()).getUnsortedRoles().stream().noneMatch(r -> r.getId().equals(environmentService.getTailRoleId()))) {
-			event.reply("Hey! You can't do that! :p").setEphemeral(true).queue();
-			return;
-		}
 
 		 NinetalesUser ntUser = mongoUserService.getUserByQuestionChannelId(event.getChannelIdLong());
 		 if(ntUser == null) {
