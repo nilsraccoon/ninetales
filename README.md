@@ -60,6 +60,7 @@ A Spring application for the Discord bot managing **Ninetales** community member
 
 ### Public Commands
 - `/link <minecraft username>` - Link your Discord account to your Minecraft account 
+- `/ign <discord user>` - Find out who someone is on Minecraft if you're too shy to ask them directly
 
 ---
 

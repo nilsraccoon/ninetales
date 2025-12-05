@@ -21,9 +21,9 @@ WORKDIR /app
 LABEL internal-port="8080"
 
 LABEL arachne.name="Ninetales Discord Bot"
-LABEL arachne.version="1.1.0"
+LABEL arachne.version="1.1.1"
 
-LABEL ninetales.update-note="server boost announcements & refactor"
+LABEL ninetales.update-note="/ign command"
 
 # Copy the built JAR from build stage
 COPY --from=build /app/target/*.jar ./app.jar
