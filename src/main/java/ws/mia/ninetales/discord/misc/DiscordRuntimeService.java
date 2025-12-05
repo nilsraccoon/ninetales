@@ -1,10 +1,9 @@
-package ws.mia.ninetales;
+package ws.mia.ninetales.discord.misc;
 
 import jakarta.annotation.PostConstruct;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
-import ws.mia.ninetales.discord.DiscordLogService;
 import ws.mia.poseidon.api.PoseidonClient;
 import ws.mia.poseidon.api.PoseidonHttpClient;
 import ws.mia.poseidon.api.model.PoseidonContainer;
@@ -12,12 +11,12 @@ import ws.mia.poseidon.api.model.PoseidonContainer;
 import java.util.List;
 
 @Service
-public class RuntimeService {
+public class DiscordRuntimeService {
 
 	private final DiscordLogService discordLogService;
 	private final Environment environment;
 
-	public RuntimeService(DiscordLogService discordLogService, Environment environment) {
+	public DiscordRuntimeService(DiscordLogService discordLogService, Environment environment) {
 		this.discordLogService = discordLogService;
 		this.environment = environment;
 	}

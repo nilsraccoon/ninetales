@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
+import ws.mia.ninetales.discord.misc.DiscordLogService;
 
 @Component
 public class LinkMessageFilterListener extends ListenerAdapter {

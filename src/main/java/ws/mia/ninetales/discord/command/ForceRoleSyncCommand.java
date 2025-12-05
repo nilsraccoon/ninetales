@@ -6,7 +6,7 @@ import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
-import ws.mia.ninetales.discord.DiscordLogService;
+import ws.mia.ninetales.discord.misc.DiscordLogService;
 import ws.mia.ninetales.discord.GuildRankService;
 
 @Component

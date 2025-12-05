@@ -1,4 +1,4 @@
-package ws.mia.ninetales.discord;
+package ws.mia.ninetales.discord.application;
 
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Guild;
@@ -11,6 +11,8 @@ import org.jspecify.annotations.Nullable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import ws.mia.ninetales.EnvironmentService;
+import ws.mia.ninetales.discord.misc.DiscordLogService;
+import ws.mia.ninetales.discord.misc.DiscordUtilService;
 import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelGuildRank;
 import ws.mia.ninetales.mojang.MojangAPI;
@@ -55,16 +57,17 @@ public class ApplicationService {
 	private final HypixelAPI hypixelAPI;
 	private final DiscordLogService discordLogService;
 	private final ApplicationArchiveService applicationArchiveService;
+	private final DiscordUtilService discordUtilService;
 
-	public ApplicationService(MongoUserService mongoUserService, EnvironmentService environmentService, MojangAPI mojangAPI, HypixelAPI hypixelAPI, @Lazy DiscordLogService discordLogService, @Lazy ApplicationArchiveService applicationArchiveService) {
+	public ApplicationService(MongoUserService mongoUserService, EnvironmentService environmentService, MojangAPI mojangAPI, HypixelAPI hypixelAPI, @Lazy DiscordLogService discordLogService, @Lazy ApplicationArchiveService applicationArchiveService, DiscordUtilService discordUtilService) {
 		this.mongoUserService = mongoUserService;
 		this.environmentService = environmentService;
 		this.mojangAPI = mojangAPI;
 		this.hypixelAPI = hypixelAPI;
 		this.discordLogService = discordLogService;
 		this.applicationArchiveService = applicationArchiveService;
+		this.discordUtilService = discordUtilService;
 	}
-
 
 	public boolean createDiscordApplicationChannel(User user, Guild guild, Runnable userNotLinkedFailure, Consumer<NinetalesUser> notOutsiderFailure,
 												   Consumer<NinetalesUser> alreadyHasApplicationOpenFailure, BiConsumer<TextChannel, NinetalesUser> success) {
@@ -88,7 +91,7 @@ public class ApplicationService {
 		if (mcUsername == null) mcUsername = ntUser.getMinecraftUuid().toString(); // fallback (Mojang API issues)
 
 		String finalMcUsername = mcUsername;
-		prepareUserStaffChannel(guild, user, mcUsername, environmentService.getDiscordApplicationsCategoryId())
+		discordUtilService.prepareUserStaffChannel(guild, user, mcUsername, environmentService.getDiscordApplicationsCategoryId())
 				.setTopic("Ninetales Visitor Application for **" + mcUsername + "**")
 				.queue(tc -> {
 					mongoUserService.setDiscordApplicationChannelId(user.getIdLong(), tc.getIdLong());
@@ -97,7 +100,7 @@ public class ApplicationService {
 					success.accept(tc, ntUser);
 
 					// Create a private staff discussion channel
-					prepareStaffChannel(guild, "tail-" + finalMcUsername, environmentService.getDiscordApplicationsCategoryId())
+					discordUtilService.prepareStaffChannel(guild, "tail-" + finalMcUsername, environmentService.getDiscordApplicationsCategoryId())
 							.setTopic("Tail discussion channel for **" + finalMcUsername + "**'s Visitor application")
 							.queue(tailTc -> {
 								mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), tailTc.getIdLong());
@@ -136,7 +139,7 @@ public class ApplicationService {
 		if (mcUsername == null) mcUsername = ntUser.getMinecraftUuid().toString(); // fallback (Mojang API issues)
 
 		String finalMcUsername = mcUsername;
-		prepareUserStaffChannel(guild, user, mcUsername, environmentService.getGuildApplicationsCategoryId())
+		discordUtilService.prepareUserStaffChannel(guild, user, mcUsername, environmentService.getGuildApplicationsCategoryId())
 				.setTopic("Ninetales Guild Application for **" + mcUsername + "**")
 				.queue(tc -> {
 					mongoUserService.setGuildApplicationChannelId(user.getIdLong(), tc.getIdLong());
@@ -144,7 +147,7 @@ public class ApplicationService {
 					attemptSendNextApplicationProcessMessage(tc);
 
 					// Create a private staff discussion channel
-					prepareStaffChannel(guild, "tail-" + finalMcUsername, environmentService.getGuildApplicationsCategoryId())
+					discordUtilService.prepareStaffChannel(guild, "tail-" + finalMcUsername, environmentService.getGuildApplicationsCategoryId())
 							.setTopic("Tail discussion channel for **" + finalMcUsername + "**'s Guild application")
 							.queue(tailTc -> {
 								mongoUserService.setTailDiscussionChannelId(ntUser.getDiscordId(), tailTc.getIdLong());
@@ -160,24 +163,7 @@ public class ApplicationService {
 		return true;
 	}
 
-	public boolean createQuestionChannel(User user, Guild guild, Consumer<NinetalesUser> hasChannelFailure, BiConsumer<TextChannel, @Nullable NinetalesUser> success) {
-		NinetalesUser ntUser = mongoUserService.getUser(user.getIdLong()); // may be null
 
-		if (ntUser != null && ntUser.getQuestionChannelId() != null) {
-			hasChannelFailure.accept(ntUser);
-			return false;
-		}
-
-		prepareUserStaffChannel(guild, user, user.getName(), environmentService.getQuestionsCategoryId())
-				.queue(tc -> {
-					mongoUserService.setQuestionChannelId(user.getIdLong(), tc.getIdLong());
-					success.accept(tc, ntUser);
-
-					discordLogService.debug("Created Question application channel", "For <@%s> at <#%s>"
-							.formatted(user.getId(), tc.getId()));
-				});
-		return true;
-	}
 
 	/**
 	 * Provides common validation for whether a user has permission to Accept/Deny applications. <br>
@@ -382,19 +368,6 @@ public class ApplicationService {
 
 		});
 
-	}
-
-	private ChannelAction<TextChannel> prepareUserStaffChannel(Guild guild, User user, String channelName, String categoryId) {
-		return Objects.requireNonNull(guild).createTextChannel(channelName, guild.getCategoryById(categoryId))
-				.addRolePermissionOverride(guild.getPublicRole().getIdLong(), null, List.of(Permission.VIEW_CHANNEL))
-				.addRolePermissionOverride(guild.getRoleById(environmentService.getTailRoleId()).getIdLong(), List.of(Permission.VIEW_CHANNEL), null)
-				.addMemberPermissionOverride(user.getIdLong(), List.of(Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND), null);
-	}
-
-	private ChannelAction<TextChannel> prepareStaffChannel(Guild guild, String channelName, String categoryId) {
-		return Objects.requireNonNull(guild).createTextChannel(channelName, guild.getCategoryById(categoryId))
-				.addRolePermissionOverride(guild.getPublicRole().getIdLong(), null, List.of(Permission.VIEW_CHANNEL))
-				.addRolePermissionOverride(guild.getRoleById(environmentService.getTailRoleId()).getIdLong(), List.of(Permission.VIEW_CHANNEL), null);
 	}
 
 	public void sendJoinGuildMessage(Guild guild, Long discordId) {

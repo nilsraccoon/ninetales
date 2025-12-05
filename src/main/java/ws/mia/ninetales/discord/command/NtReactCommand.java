@@ -1,7 +1,6 @@
 package ws.mia.ninetales.discord.command;
 
 import net.dv8tion.jda.api.Permission;
-import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.DefaultMemberPermissions;
@@ -9,15 +8,12 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
-import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
-import ws.mia.ninetales.discord.DiscordLogService;
+import ws.mia.ninetales.discord.misc.DiscordLogService;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.function.Consumer;
 
 @Component
 public class NtReactCommand extends SlashCommand {

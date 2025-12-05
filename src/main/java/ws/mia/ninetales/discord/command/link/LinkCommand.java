@@ -9,13 +9,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.TaskScheduler;
-import org.springframework.scheduling.concurrent.SimpleAsyncTaskScheduler;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
-import ws.mia.ninetales.discord.DiscordLogService;
+import ws.mia.ninetales.discord.misc.DiscordLogService;
 import ws.mia.ninetales.discord.GuildRankService;
 import ws.mia.ninetales.discord.command.SlashCommand;
-import ws.mia.ninetales.hypixel.CachedHypixelAPI;
 import ws.mia.ninetales.hypixel.HypixelAPI;
 import ws.mia.ninetales.mojang.MojangAPI;
 import ws.mia.ninetales.mongo.MongoUserService;
@@ -84,13 +82,13 @@ public class LinkCommand extends SlashCommand {
 		String expectedDiscord = hypixelAPI.getDiscord(mojangUuid);
 
 		if (expectedDiscord == null) {
-			event.reply("We couldn't find a discord on your Hypixel profile.\nPlease link your discord on Hypixel using the method above <3\n-# (Hypixel may take a moment to update your information, if you have linked on hypixel and are seeing this, please wait a moment and try again)").setEphemeral(true).queue();
+			event.reply("We couldn't find a discord on your Hypixel profile.\nPlease link your discord on Hypixel using the method above <3\n-# (Hypixel may take a few minutes to update your information, if you have linked on hypixel and are seeing this, please wait a moment and try again)").setEphemeral(true).queue();
 			discordLogService.debug(event, "Couldn't find discord in Hypixel API");
 			return;
 		}
 
 		if (!expectedDiscord.equals(event.getUser().getName())) {
-			event.reply("That minecraft account isn't linked to your discord!\nFollow the steps above to link your account.").setEphemeral(true).queue();
+			event.reply("That minecraft account isn't linked to your discord!\nFollow the steps above to link your account.\n-# (Hypixel may take a while to update your information, if you have changed your discord within the past few minutes, please wait a moment and try again)").setEphemeral(true).queue();
 			discordLogService.debug(event, "Found wrong discord in Hypixel API (API: `" + expectedDiscord + "`)");
 			return;
 		}

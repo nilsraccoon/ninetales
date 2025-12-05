@@ -13,8 +13,9 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
-import ws.mia.ninetales.discord.ApplicationService;
-import ws.mia.ninetales.discord.DiscordLogService;
+import ws.mia.ninetales.discord.application.ApplicationService;
+import ws.mia.ninetales.discord.misc.DiscordLogService;
+import ws.mia.ninetales.discord.misc.QuestionService;
 
 import java.awt.*;
 
@@ -30,12 +31,14 @@ public class PasteWelcomeMessageCommand extends SlashCommand {
 	private final EnvironmentService environmentService;
 	private final ApplicationService applicationService;
 	private final DiscordLogService discordLogService;
+	private final QuestionService questionService;
 
-	public PasteWelcomeMessageCommand(EnvironmentService environmentService, ApplicationService applicationService, @Lazy DiscordLogService discordLogService) {
+	public PasteWelcomeMessageCommand(EnvironmentService environmentService, ApplicationService applicationService, @Lazy DiscordLogService discordLogService, QuestionService questionService) {
 		super();
 		this.environmentService = environmentService;
 		this.applicationService = applicationService;
 		this.discordLogService = discordLogService;
+		this.questionService = questionService;
 	}
 
 	@Override
@@ -103,7 +106,7 @@ public class PasteWelcomeMessageCommand extends SlashCommand {
 		}
 
 		if (event.getComponentId().equals(BUTTON_ASK_QUESTION_ID)) {
-			applicationService.createQuestionChannel(event.getUser(), event.getGuild(),
+			questionService.createQuestionChannel(event.getUser(), event.getGuild(),
 					(ntUser) -> {
 						event.reply("You already have an open questions channel at <#%s>.\nIf you have any additional questions, ask them there :3"
 										.formatted(ntUser.getQuestionChannelId()))

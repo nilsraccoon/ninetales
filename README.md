@@ -88,6 +88,7 @@ A Spring application for the Discord bot managing **Ninetales** community member
 | `GUILD_JOIN_MESSAGE_CHANNEL_ID`         | ❌        | -       | Channel ID for guild join messages (optional)            |
 | `LOG_CHANNEL_ID`                        | ❌        | -       | Channel ID for logs of level `INFO` and above (optional) |
 | `DEBUG_LOG_CHANNEL_ID`                  | ❌        | -       | Channel ID for logs of level `DEBUG` (optional)          |
+| `SERVER_BOOST_MESSAGE_CHANNEL_ID`       | ❌        | -       | Channel ID for server boost messages (optional)          |
 
 ---
 

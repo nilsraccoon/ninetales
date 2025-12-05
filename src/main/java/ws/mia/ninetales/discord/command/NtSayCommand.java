@@ -9,15 +9,13 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
-import org.springframework.boot.logging.LogLevel;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
-import ws.mia.ninetales.discord.DiscordLogService;
+import ws.mia.ninetales.discord.misc.DiscordLogService;
 import ws.mia.ninetales.mongo.MongoUserService;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
 
 @Component

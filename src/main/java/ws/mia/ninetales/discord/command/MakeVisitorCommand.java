@@ -10,8 +10,8 @@ import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import ws.mia.ninetales.EnvironmentService;
-import ws.mia.ninetales.discord.ApplicationService;
-import ws.mia.ninetales.discord.DiscordLogService;
+import ws.mia.ninetales.discord.application.ApplicationService;
+import ws.mia.ninetales.discord.misc.DiscordLogService;
 import ws.mia.ninetales.mongo.MongoUserService;
 import ws.mia.ninetales.mongo.NinetalesUser;
 

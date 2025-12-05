@@ -98,4 +98,9 @@ public class EnvironmentService {
 		return System.getenv("DEBUG_LOG_CHANNEL_ID");
 	}
 
+	@Nullable
+	public String getServerBoostMessageChannelId() {
+		return System.getenv("SERVER_BOOST_MESSAGE_CHANNEL_ID");
+	}
+
 }

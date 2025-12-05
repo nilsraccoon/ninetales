@@ -1,7 +1,5 @@
-package ws.mia.ninetales.discord;
+package ws.mia.ninetales.discord.misc;
 
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.Message;
